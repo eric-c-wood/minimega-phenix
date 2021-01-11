@@ -222,6 +222,108 @@ func newVMKillCmd() *cobra.Command {
 	return cmd
 }
 
+func newVMRestartCmd() *cobra.Command {
+	desc := `Restart a running or powered down vm
+	
+  Used to restart a running or powered off virtual machine for a specific 
+  experiment`
+
+	cmd := &cobra.Command{
+		Use:   "restart <experiment name> <vm name>",
+		Short: "Restart a running or powered off VM",
+		Long:  desc,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) != 2 {
+				return fmt.Errorf("Must provide an experiment and VM name")
+			}
+
+			var (
+				expName = args[0]
+				vmName  = args[1]
+			)
+
+			if err := vm.Restart(expName, vmName); err != nil {
+				err := util.HumanizeError(err, "Unable to restart the "+vmName+" VM")
+				return err.Humanized()
+			}
+
+			fmt.Printf("The %s VM in the %s experiment was restarted\n", vmName, expName)
+
+			return nil
+		},
+	}
+
+	return cmd
+}
+
+func newVMShutdownCmd() *cobra.Command {
+	desc := `Shuts down or powers off a running vm
+	
+  Used to shutdown or power off a running virtual machine for a specific 
+  experiment`
+
+	cmd := &cobra.Command{
+		Use:   "shutdown <experiment name> <vm name>",
+		Short: "Shutdown a running VM",
+		Long:  desc,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) != 2 {
+				return fmt.Errorf("Must provide an experiment and VM name")
+			}
+
+			var (
+				expName = args[0]
+				vmName  = args[1]
+			)
+
+			if err := vm.Shutdown(expName, vmName); err != nil {
+				err := util.HumanizeError(err, "Unable to shutdown the "+vmName+" VM")
+				return err.Humanized()
+			}
+
+			fmt.Printf("The %s VM in the %s experiment was shutdown\n", vmName, expName)
+
+			return nil
+		},
+	}
+
+	return cmd
+}
+
+func newVMResetDiskCmd() *cobra.Command {
+	desc := `Resets the disk state to the pre-boot disk state for a running or powered off vm
+	
+  Used to reset the disk state for a running or powered off virtual machine for a specific 
+  experiment`
+
+	cmd := &cobra.Command{
+		Use:   "resetdisk <experiment name> <vm name>",
+		Short: "Resets the disk state for a running or powered off VM",
+		Long:  desc,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) != 2 {
+				return fmt.Errorf("Must provide an experiment and VM name")
+			}
+
+			var (
+				expName = args[0]
+				vmName  = args[1]
+			)
+
+			if err := vm.ResetDiskState(expName, vmName); err != nil {
+				err := util.HumanizeError(err, "Unable to reset disk for "+vmName+" VM")
+				return err.Humanized()
+			}
+
+			fmt.Printf("The %s VM's disk in the %s experiment was reset\n", vmName, expName)
+
+			return nil
+		},
+	}
+
+	return cmd
+}
+
 func newVMSetCmd() *cobra.Command {
 	desc := `Set configuration value for a VM
 	
@@ -405,6 +507,9 @@ func init() {
 	vmCmd.AddCommand(newVMResumeCmd())
 	vmCmd.AddCommand(newVMRedeployCmd())
 	vmCmd.AddCommand(newVMKillCmd())
+	vmCmd.AddCommand(newVMShutdownCmd())
+	vmCmd.AddCommand(newVMRestartCmd())
+	vmCmd.AddCommand(newVMResetDiskCmd())
 	vmCmd.AddCommand(newVMSetCmd())
 	vmCmd.AddCommand(newVMNetCmd())
 	vmCmd.AddCommand(newVMCaptureCmd())

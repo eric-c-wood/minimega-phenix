@@ -328,23 +328,22 @@ func Restart(expName, vmName string) error {
 	if vmName == "" {
 		return fmt.Errorf("no VM name provided")
 	}
-	
-	state,err := mm.GetVMState(mm.NS(expName),mm.VMName(vmName)) 
-	
+
+	state, err := mm.GetVMState(mm.NS(expName), mm.VMName(vmName))
+
 	if err != nil {
-		return fmt.Errorf("Retrieving state for VM %s in experiment %s: %w", vmName,expName,err)
+		return fmt.Errorf("Retrieving state for VM %s in experiment %s: %w", vmName, expName, err)
 	}
-	
+
 	//Using "system_reset" on a VM that is in the "QUIT" state fails
 	if state == "QUIT" {
-		return mm.StartVM(mm.NS(expName),mm.VMName(vmName))
-		
+		return mm.StartVM(mm.NS(expName), mm.VMName(vmName))
+
 	}
-	
+
 	cmd := mmcli.NewNamespacedCommand(expName)
 	qmp := fmt.Sprintf(`{ "execute": "system_reset" }`)
 	cmd.Command = fmt.Sprintf("vm qmp %s '%s'", vmName, qmp)
-		
 
 	_, err = mmcli.SingleResponse(mmcli.Run(cmd))
 	if err != nil {
@@ -364,49 +363,49 @@ func Shutdown(expName, vmName string) error {
 	if vmName == "" {
 		return fmt.Errorf("no VM name provided")
 	}
-	
-	state,err := mm.GetVMState(mm.NS(expName),mm.VMName(vmName)) 
-	
+
+	state, err := mm.GetVMState(mm.NS(expName), mm.VMName(vmName))
+
 	if err != nil {
-		return fmt.Errorf("Retrieving state for VM %s in experiment %s: %w", vmName,expName,err)
+		return fmt.Errorf("Retrieving state for VM %s in experiment %s: %w", vmName, expName, err)
 	}
-	
+
 	//No need to power off a VM that has already been powered down
 	if state == "QUIT" {
-		return nil	
-		
-	}
-	
-	/*
-	Code can be used for sending a power down signal to the vm
-	For the time being, this will not be implemented as we would
-	expect a user to be able to issue a power down command directly.
-	
-	cmd := mmcli.NewNamespacedCommand(expName)
-	qmp := fmt.Sprintf(`{ "execute": "system_powerdown" }`)
-	cmd.Command = fmt.Sprintf("vm qmp %s '%s'", vmName, qmp)
-		
+		return nil
 
-	_, err := mmcli.SingleResponse(mmcli.Run(cmd))
-	if err != nil {
-		return fmt.Errorf("Shutting down VM %s: %w", vmName, err)
 	}
-	
+
+	/*
+		Code can be used for sending a power down signal to the vm
+		For the time being, this will not be implemented as we would
+		expect a user to be able to issue a power down command directly.
+
+		cmd := mmcli.NewNamespacedCommand(expName)
+		qmp := fmt.Sprintf(`{ "execute": "system_powerdown" }`)
+		cmd.Command = fmt.Sprintf("vm qmp %s '%s'", vmName, qmp)
+
+
+		_, err := mmcli.SingleResponse(mmcli.Run(cmd))
+		if err != nil {
+			return fmt.Errorf("Shutting down VM %s: %w", vmName, err)
+		}
+
 	*/
-	
+
 	//Stop all packet captures for a vm that will be powered down
 	err = StopCaptures(expName, vmName)
 	if err != nil && !errors.Is(err, ErrNoCaptures) {
 		return fmt.Errorf("stopping captures for VM %s in experiment %s: %w", vmName, expName, err)
 	}
-	
+
 	//Forced shutdown implementation is equivalent to killing the vm
 	//without a flush to preserve the state
 	cmd := mmcli.NewNamespacedCommand(expName)
 	cmd.Command = "vm kill " + vmName
 
 	if err := mmcli.ErrorResponse(mmcli.Run(cmd)); err != nil {
-		return fmt.Errorf("Shutting down VM %s in experiment %s: %w", vmName,expName,err)
+		return fmt.Errorf("Shutting down VM %s in experiment %s: %w", vmName, expName, err)
 	}
 
 	return nil
@@ -422,43 +421,40 @@ func ResetDiskState(expName, vmName string) error {
 	if vmName == "" {
 		return fmt.Errorf("no VM name provided")
 	}
-	
-	
-	state,err := mm.GetVMState(mm.NS(expName),mm.VMName(vmName))
-	
+
+	state, err := mm.GetVMState(mm.NS(expName), mm.VMName(vmName))
+
 	if err != nil {
-		return fmt.Errorf("Retrieving state for VM %s in experiment %s: %w", vmName,expName,err)
+		return fmt.Errorf("Retrieving state for VM %s in experiment %s: %w", vmName, expName, err)
 	}
-	
-	
-	
+
 	//Stop all packet captures for a vm that will be reset to
 	//its original state.  We are going to assume that a vm
 	//that has been shutdown will not have any active packet captures
 	if state == "RUNNING" {
-	
+
 		err := StopCaptures(expName, vmName)
 		if err != nil && !errors.Is(err, ErrNoCaptures) {
 			return fmt.Errorf("stopping captures for VM %s in experiment %s: %w", vmName, expName, err)
 		}
-		
+
 		//Kill the vm without a flush to preserve state
 		cmd := mmcli.NewNamespacedCommand(expName)
 		cmd.Command = "vm kill " + vmName
 
 		if err := mmcli.ErrorResponse(mmcli.Run(cmd)); err != nil {
-			return fmt.Errorf("Killing VM %s in experiment %s: %w", vmName,expName,err)
+			return fmt.Errorf("Killing VM %s in experiment %s: %w", vmName, expName, err)
 		}
-		
+
 	}
-		
-		
+
 	//Overwrite the current vm snapshot with the untouched snapshot
-		
+	//The snapshot is only "untouched" if the vm is started with the
+	//qemu snapshot flag
 	//Get current disk snapshot on the compute node (based on VM ID).
 	cmd := mmcli.NewNamespacedCommand(expName)
 	cmd.Command = "vm info"
-	cmd.Columns = []string{"host", "name", "id", "state","disks"}
+	cmd.Columns = []string{"host", "name", "id", "state", "disks"}
 	cmd.Filters = []string{"name=" + vmName}
 
 	status := mmcli.RunTabular(cmd)
@@ -468,13 +464,12 @@ func ResetDiskState(expName, vmName string) error {
 	}
 
 	var (
-		
-		origSnap = strings.Split(status[0]["disks"],",")[0]
-		snap = "/tmp/minimega/" + status[0]["id"] + "/disk-0.qcow2"
-		node = status[0]["host"]
+		origSnap  = strings.Split(status[0]["disks"], ",")[0]
+		snap      = "/tmp/minimega/" + status[0]["id"] + "/disk-0.qcow2"
+		node      = status[0]["host"]
 		cmdPrefix = ""
-	)	
-	
+	)
+
 	if !mm.IsHeadnode(node) {
 		cmdPrefix = "mesh send " + node
 	}
@@ -482,19 +477,16 @@ func ResetDiskState(expName, vmName string) error {
 	cmd.Command = fmt.Sprintf("%s shell cp %s %s", cmdPrefix, origSnap, snap)
 
 	if err := mmcli.ErrorResponse(mmcli.Run(cmd)); err != nil {
-		return fmt.Errorf("copying snapshot remotely for VM %s in experiment %s: %w", vmName,expName,err)
-	}
-	
-	//restart the vm
-	if err := mm.StartVM(mm.NS(expName), mm.VMName(vmName)); err != nil {
-		return fmt.Errorf("starting VM %s in experiment %s: %w", vmName,expName,err)
+		return fmt.Errorf("copying snapshot remotely for VM %s in experiment %s: %w", vmName, expName, err)
 	}
 
-	
+	//restart the vm
+	if err := mm.StartVM(mm.NS(expName), mm.VMName(vmName)); err != nil {
+		return fmt.Errorf("starting VM %s in experiment %s: %w", vmName, expName, err)
+	}
 
 	return nil
 }
-
 
 // Resume starts a paused VM with the given name in the experiment with the
 // given name. It returns any errors encountered while resuming the VM.
@@ -723,12 +715,10 @@ func Snapshot(expName, vmName, out string, cb func(string)) error {
 	cmd.Command = "vm migrate"
 	cmd.Columns = []string{"name", "status", "complete (%)"}
 	cmd.Filters = []string{"name=" + vmName}
-	
 	//Adding a 1 second delay before calling "vm migrate"
 	//for a status update appears to prevent the status call
 	//from crashing minimega
 	time.Sleep(1 * time.Second)
-	
 	for {
 		status := mmcli.RunTabular(cmd)[0]
 
@@ -906,10 +896,10 @@ func CommitToDisk(expName, vmName, out string, cb func(float64)) (string, error)
 		snap = "/tmp/minimega/" + status[0]["id"] + "/disk-0.qcow2"
 		node = status[0]["host"]
 	)
-	if(!filepath.IsAbs(base)) {
+	if !filepath.IsAbs(base) {
 		base = common.PhenixBase + "/images/" + base
 	}
-	if(!filepath.IsAbs(out)) {
+	if !filepath.IsAbs(out) {
 		out = common.PhenixBase + "/images/" + out
 	}
 	wait, ctx := errgroup.WithContext(context.Background())
@@ -948,7 +938,7 @@ func CommitToDisk(expName, vmName, out string, cb func(float64)) (string, error)
 		if err := mmcli.ErrorResponse(mmcli.Run(cmd)); err != nil {
 			return "", fmt.Errorf("stopping VM: %w", err)
 		}
-	}
+	}                           
 
 	// Copy minimega snapshot disk on remote machine to a location (still on
 	// remote machine) that can be seen by minimega files. Then use minimega `file
@@ -1046,14 +1036,123 @@ func CommitToDisk(expName, vmName, out string, cb func(float64)) (string, error)
 	if err := file.SyncFile(out, nil); err != nil {
 		return "", fmt.Errorf("syncing new backing image across cluster: %w", err)
 	}
-	
+
 	//restart the vm
 	if err := mm.StartVM(mm.NS(expName), mm.VMName(vmName)); err != nil {
-		return "",fmt.Errorf("starting VM: %w", err)
+		return "", fmt.Errorf("starting VM: %w", err)
 	}
 
 	return out, nil
 
 }
 
+//-----------------------------------------------------------------------------------------------------------------
+
+func MemorySnapshot(expName, vmName, out string, cb func(string)) (string, error) {
+
+	_, err := Get(expName, vmName)
+	if err != nil {
+		return "", fmt.Errorf("getting VM details: %w", err)
+	}
+
+	if out == "" {
+		var err error
+
+		out, err = GetNewDiskName(expName, vmName)
+		if err != nil {
+			return "", fmt.Errorf("getting new disk name for VM %s in experiment %s: %w", vmName, expName, err)
+		}
+		out = fmt.Sprintf("%s_%s__%s_memorySnapshot.elf", expName, vmName, out)
+	}
+
+	base, err := getBaseImage(expName, vmName)
+	if err != nil {
+		return "", fmt.Errorf("getting base image for VM %s in experiment %s: %w", vmName, expName, err)
+	}
+
+	// Get compute node VM is running on.
+
+	cmd := mmcli.NewNamespacedCommand(expName)
+	cmd.Command = "vm info"
+	cmd.Columns = []string{"host", "name", "id", "state"}
+	cmd.Filters = []string{"name=" + vmName}
+
+	status := mmcli.RunTabular(cmd)
+
+	if len(status) == 0 {
+		return "", fmt.Errorf("VM not found")
+	}
+
+	if !filepath.IsAbs(base) {
+		base = common.PhenixBase + "/images/" + base
+	}
+	if !filepath.IsAbs(out) {
+		out = common.PhenixBase + "/images/" + out
+	}
+
+	// ***** BEGIN: MEMORY SNAPSHOT VM *****
+
+	// Get minimega's memory snapshot path for VM
+
+	cmd.Columns = nil
+	cmd.Filters = nil
+
+	qmp := fmt.Sprintf(`{ "execute": "dump-guest-memory", "arguments": { "protocol": "file:%s", "paging": false, "format": "elf" , "detach": true} }`, out)
+	cmd.Command = fmt.Sprintf("vm qmp %s '%s'", vmName, qmp)
+
+	if err := mmcli.ErrorResponse(mmcli.Run(cmd)); err != nil {
+		return "", fmt.Errorf("starting memory snapshot for VM %s: ERROR: %w -- cmd: '%s'", vmName, err, cmd)
+		
+	}
+	
+	
+	qmp = fmt.Sprintf(`{ "execute": "query-dump" }`)
+	cmd.Command = fmt.Sprintf("vm qmp %s '%s'", vmName, qmp)	
+	
+
+	
+	//Adding a 1 second delay before calling "vm migrate"
+	//for a status update appears to prevent the status call
+	//from crashing minimega
+	var (
+		v mm.BlockDumpResponse
+		res string
+		progress string
+	)
+	
+	for {
+		
+		res, err = mmcli.SingleResponse(mmcli.Run(cmd))
+		if err != nil {
+			cb("failed")
+			return "",fmt.Errorf("getting memory dump status for VM %s: %w", vmName, err)
+		}
+		
+		json.Unmarshal([]byte(res), &v)	
+		
+		if len(v.Return.Status) == 0 {
+			cb("failed")
+			return "",fmt.Errorf("no status available for %s: %s", vmName, v)
+		
+		}
+		
+		progress = fmt.Sprintf("%v",float64(v.Return.Completed)/float64(v.Return.Total))
+			
+		cb(progress)	
+		
+		if v.Return.Status == "completed" {			
+			break	
+		}
+		
+		time.Sleep(1 * time.Second)
+		
+		
+		
+		
+	}
+
+		
+	return out, nil
+
+}
 
