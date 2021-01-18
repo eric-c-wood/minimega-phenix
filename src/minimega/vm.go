@@ -614,7 +614,9 @@ func (vm *BaseVM) networkConnect(pos, vlan int, bridge string) error {
 	nic.Bridge = bridge
 
 	// TODO: what to do with nic.Raw?
-
+	
+	//Update the "bridges" file
+	mustWrite(filepath.Join(*f_base, "bridges"), bridgeInfo())
 	return nil
 }
 
@@ -654,6 +656,9 @@ func (vm *BaseVM) networkDisconnect(pos int) error {
 	nic.VLAN = DisconnectedVLAN
 
 	// TODO: what to do with nic.Raw?
+	
+	//Update the "bridges" file
+	mustWrite(filepath.Join(*f_base, "bridges"), bridgeInfo())
 
 	return nil
 }

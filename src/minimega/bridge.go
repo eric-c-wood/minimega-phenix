@@ -71,7 +71,13 @@ func getBridge(b string) (*bridge.Bridge, error) {
 		return nil, err
 	}
 
+	/*Should the "bridges" file be updated during a "Get" function
+	Writing to disk here causes significant issues with performance as
+	many functions such as "vm info" call this function numerous times.
+	Moving to functions that modify taps as that makes more sense and
+	greatly improves performance
 	mustWrite(filepath.Join(*f_base, "bridges"), bridgeInfo())
+	*/
 
 	return br, nil
 }

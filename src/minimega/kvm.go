@@ -684,6 +684,8 @@ func (vm *KvmVM) launch() error {
 
 		nic.Tap = tap
 	}
+	
+	mustWrite(filepath.Join(*f_base, "bridges"), bridgeInfo())
 
 	if len(vm.Networks) > 0 {
 		if err := vm.writeTaps(); err != nil {
