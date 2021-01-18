@@ -308,9 +308,36 @@ func (this *Client) screenshots() {
 		case <-this.done:
 			return
 		case <-ticker.C:
+			
+			
+			//Do not get screenshots for experiments that are not running
+			if this.vms == nil {
+				continue
+			}
+			
+			expName := this.vms[0].exp
+			exp, err := experiment.Get(expName)
+			
+			if err != nil {
+				log.Error("getting experiment %s for WebSocket client: %v", expName, err)
+				continue
+			}
+			
+			if !exp.Running() {
+				continue
+				
+			}
+			
 			this.RLock()
 
 			for _, v := range this.vms {
+				
+				//Do not get screenshots for vms that are not running
+				state,err := mm.GetVMState(mm.NS(v.exp), mm.VMName(v.name))				
+				if state != "RUNNING" || err != nil {
+					continue	
+				}
+				
 				screenshot, err := util.GetScreenshot(v.exp, v.name, "200")
 				if err != nil {
 					log.Error("getting screenshot for WebSocket client: %v", err)

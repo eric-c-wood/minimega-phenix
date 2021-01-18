@@ -410,7 +410,7 @@ func (Minimega) GetVMState(opts ...Option) (string, error) {
 	o := NewOptions(opts...)
 
 	cmd := mmcli.NewNamespacedCommand(o.ns)
-	cmd.Command = "vm info"
+	cmd.Command = "vm info summary"
 	cmd.Columns = []string{"state"}
 	cmd.Filters = []string{"name=" + o.vm}
 
