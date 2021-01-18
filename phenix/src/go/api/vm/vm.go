@@ -1108,12 +1108,7 @@ func MemorySnapshot(expName, vmName, out string, cb func(string)) (string, error
 	
 	qmp = fmt.Sprintf(`{ "execute": "query-dump" }`)
 	cmd.Command = fmt.Sprintf("vm qmp %s '%s'", vmName, qmp)	
-	
 
-	
-	//Adding a 1 second delay before calling "vm migrate"
-	//for a status update appears to prevent the status call
-	//from crashing minimega
 	var (
 		v mm.BlockDumpResponse
 		res string
@@ -1140,7 +1135,8 @@ func MemorySnapshot(expName, vmName, out string, cb func(string)) (string, error
 			
 		cb(progress)	
 		
-		if v.Return.Status == "completed" {			
+		if v.Return.Status == "completed" {	
+			cb("completed")
 			break	
 		}
 		

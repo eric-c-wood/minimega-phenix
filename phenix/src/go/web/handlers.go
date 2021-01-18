@@ -1902,9 +1902,12 @@ func MemorySnapVM(w http.ResponseWriter, r *http.Request) {
 	status := make(chan string)
 
 	go func() {
+		
+		defer close(status)
+		
 		for {
 			s := <-status
-			if s == "failed" {
+			if s == "failed" || s == "completed" {
 				return
 			}
 			
@@ -1914,7 +1917,7 @@ func MemorySnapVM(w http.ResponseWriter, r *http.Request) {
 					"percent": progress,
 				}
 
-				log.Info("%s/%s memory snapshot percent complete: %v", exp,name,progress)
+				log.Info("%s_%s memory snapshot percent complete: %v", exp,name,progress)
 				
 				marshalled, _ := json.Marshal(status)
 
@@ -1953,6 +1956,14 @@ func MemorySnapVM(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	
+	screenshot, err := util.GetScreenshot(exp, name, "215")
+	if err != nil {
+		log.Error("getting screenshot - %v", err)
+	} else {
+		v.Screenshot = "data:image/png;base64," + base64.StdEncoding.EncodeToString(screenshot)
+	}
+	
 
 	payload.Vm = util.VMToProtobuf(exp, *v)
 	body, _ = marshaler.Marshal(payload)
