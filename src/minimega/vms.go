@@ -120,15 +120,25 @@ func (vms *VMs) Commit() (uint64, uint64, int) {
 }
 
 // Info populates resp with info about launched VMs.
-func (vms *VMs) Info(masks []string, resp *minicli.Response) {
+func (vms *VMs) Info(masks []string, resp *minicli.Response,vmName string) {
 	vms.mu.Lock()
 	defer vms.mu.Unlock()
 
+	log.Info("Masks:%v vmName:%s",masks,vmName)
 	resp.Header = masks
 	// for resp.Data
 	res := []VM{}
 
 	for _, vm := range vms.m {
+		
+		//If a vmName was provided, retrieve
+		//only the specified vm
+		if len(vmName) > 0 {			
+			if vm.GetName() != vmName {
+				
+				continue
+			}
+		}
 		// Update dynamic fields before querying info
 		vm.UpdateNetworks()
 

@@ -479,8 +479,52 @@ func cliVMInfo(ns *Namespace, c *minicli.Command, resp *minicli.Response) error 
 	if c.BoolArgs["summary"] {
 		fields = vmInfoLite
 	}
+	
+	if _,ok := c.StringArgs["columns"]; ok == true {
+		
+		fields = strings.Split(c.StringArgs["columns"],",")	
+	}
+	
+	vmName := ""
+	if _,ok := c.StringArgs["filter"]; ok == true {
+		for _,filterName := range strings.Split(c.StringArgs["filter"]," ") {
+			
+			if strings.Contains(filterName,"name=") {
+				
+				//Skip strings with special character filters
+				if strings.ContainsAny(filterName,"~![]{}") {
+					continue	
+				}
+				vmName = strings.Split(filterName,"name=")[1]
+				
+			}
+			
+		}
+		
+	}
+	
+	if len(vmName) > 0 {
+		
+		found := false
+		
+		for _,field := range fields {
+		
+			if field == "name" {
+				
+					found = true
+				break
+			}
+			
+		}
+		
+		if !found {
+			fields = append(fields,"name")	
+		}
+		
+	}
 
-	ns.VMs.Info(fields, resp)
+
+	ns.VMs.Info(fields, resp,vmName)
 	return nil
 }
 

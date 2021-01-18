@@ -399,6 +399,11 @@ func namespaceCommands(ns *Namespace, cmd *minicli.Command) []*minicli.Command {
 		if host == hostname {
 			// Create a deep copy of the command by recompiling it
 			cmd2 := minicli.MustCompile(cmd.Original)
+			
+			//StringArgs get dropped after compiling, forward
+			//so vm info can use
+			cmd2.StringArgs = cmd.StringArgs
+			
 			cmds = append(cmds, cmd2)
 		} else {
 			// Quote the hostname in case there are spaces

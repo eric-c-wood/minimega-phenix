@@ -378,6 +378,10 @@ func cliFilter(c *Command, out chan<- Responses) {
 		return
 	}
 
+	//Forward to the next command so a 
+	//command like vm info can use
+	c.Subcommand.StringArgs = c.StringArgs
+	
 	c.Subcommand.SetRecord(false)
 
 outer:
@@ -405,6 +409,10 @@ outer:
 func cliColumns(c *Command, out chan<- Responses) {
 	columns := strings.Split(c.StringArgs["columns"], ",")
 
+	//Forward to the next command so a command
+	//like vm info can use
+	c.Subcommand.StringArgs["columns"] = c.StringArgs["columns"]
+	
 	c.Subcommand.SetRecord(false)
 
 outer:
