@@ -1,8 +1,10 @@
 #!/bin/bash -e
 
-systemctl daemon-reload >/dev/null 2>&1
+if command -v systemctl &> /dev/null ; then
+  systemctl daemon-reload &> /dev/null
+fi
 
-if ! getent group minimega >/dev/null 2>&1; then
+if ! getent group minimega &> /dev/null ; then
     echo "Adding minimega group."
     groupadd --system minimega
 else
