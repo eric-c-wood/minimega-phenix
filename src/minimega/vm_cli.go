@@ -480,14 +480,15 @@ func cliVMInfo(ns *Namespace, c *minicli.Command, resp *minicli.Response) error 
 		fields = vmInfoLite
 	}
 	
-	if _,ok := c.StringArgs["columns"]; ok == true {
+	if _,ok := c.StringArgs["savedColumns"]; ok == true {
 		
-		fields = strings.Split(c.StringArgs["columns"],",")	
+		fields = strings.Split(c.StringArgs["savedColumns"],",")	
 	}
 	
 	vmName := ""
-	if _,ok := c.StringArgs["filter"]; ok == true {
-		for _,filterName := range strings.Split(c.StringArgs["filter"]," ") {
+	if _,ok := c.StringArgs["savedFilter"]; ok == true {
+		log.Info("Filters:%v",c.StringArgs)
+		for _,filterName := range strings.Split(c.StringArgs["savedFilter"]," ") {
 			
 			if strings.Contains(filterName,"name=") {
 				

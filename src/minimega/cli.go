@@ -402,7 +402,14 @@ func namespaceCommands(ns *Namespace, cmd *minicli.Command) []*minicli.Command {
 			
 			//StringArgs get dropped after compiling, forward
 			//so vm info can use
-			cmd2.StringArgs = cmd.StringArgs
+			if _,ok := cmd.StringArgs["savedFilter"]; ok == true {
+				cmd2.StringArgs["savedFilter"] = cmd.StringArgs["savedFilter"]
+			}
+	
+			if _,ok := cmd.StringArgs["savedColumns"]; ok == true {
+				cmd2.StringArgs["savedColumns"] = cmd.StringArgs["savedColumns"]
+			}
+			
 			
 			cmds = append(cmds, cmd2)
 		} else {

@@ -10,6 +10,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	//log "minilog"
 )
 
 type filter struct {
@@ -367,7 +368,7 @@ func filterResp(f filter, r *Response) (bool, error) {
 	return true, nil
 }
 
-func cliFilter(c *Command, out chan<- Responses) {
+func cliFilter(c *Command, out chan<- Responses) {	
 	f, err := parseFilter(c.StringArgs["filter"])
 	if err != nil {
 		resp := &Response{
@@ -380,7 +381,22 @@ func cliFilter(c *Command, out chan<- Responses) {
 
 	//Forward to the next command so a 
 	//command like vm info can use
-	c.Subcommand.StringArgs = c.StringArgs
+	if _,ok := c.StringArgs["columns"]; ok == true{
+		c.Subcommand.StringArgs["savedColumns"] = c.StringArgs["columns"]		
+	}
+	
+	
+	if strings.Contains(c.StringArgs["filter"],"name=") {
+		c.Subcommand.StringArgs["savedFilter"] = c.StringArgs["filter"]
+	}
+	
+	if _,ok := c.StringArgs["savedFilter"]; ok == true {
+		c.Subcommand.StringArgs["savedFilter"] = c.StringArgs["savedFilter"]
+	}
+	
+	if _,ok := c.StringArgs["savedColumns"]; ok == true {
+		c.Subcommand.StringArgs["savedColumns"] = c.StringArgs["savedColumns"]
+	}
 	
 	c.Subcommand.SetRecord(false)
 
