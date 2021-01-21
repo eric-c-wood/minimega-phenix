@@ -47,8 +47,8 @@ DOCS=$SCRIPT_DIR/minimega/usr/share/doc/minimega
 
 mkdir -p $DOCS
 
-cp $MM_DIR/LICENSE     $DOCS/
-cp -r $MM_DIR/LICENSES $DOCS/
+cp $MM/LICENSE     $DOCS/
+cp -r $MM/LICENSES $DOCS/
 
 echo COPIED FILES
 
