@@ -427,7 +427,7 @@ func cliColumns(c *Command, out chan<- Responses) {
 
 	//Forward to the next command so a command
 	//like vm info can use
-	c.Subcommand.StringArgs["columns"] = c.StringArgs["columns"]
+	c.Subcommand.StringArgs["savedColumns"] = c.StringArgs["columns"]
 	
 	c.Subcommand.SetRecord(false)
 
