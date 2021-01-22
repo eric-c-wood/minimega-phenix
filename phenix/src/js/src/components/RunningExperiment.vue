@@ -42,7 +42,7 @@
         </div>
         <div v-if="experimentUser() && !showModifyStateBar && expModal.vm.running">
              &nbsp; 
-          <b-tooltip  label="create memory snapshot" type="is-light">
+          <b-tooltip  label="create a disk image" type="is-light">
             <b-button class="button is-light" icon-left="database" @click="memoryDump(expModal.vm.name)">
              </b-button>
           </b-tooltip>
@@ -255,7 +255,7 @@
     <b-modal :active.sync="memoryDumpModal.active" has-modal-card :on-cancel="resetMemoryDumpModal" ref="memoryDump">
       <div  class="modal-card" style="width:auto">
         <header class="modal-card-head">
-          <p  class="modal-card-title">Create a Memory Snapshot</p>
+          <p  class="modal-card-title">Create a Disk Image</p>
         </header>
         <section class="modal-card-body">
          <div v-if="memoryDumpModal.vm.length > 0">
@@ -320,7 +320,7 @@
             </div>
           <div  v-if="experimentUser() && !showModifyStateBar">
               &nbsp;  
-              <b-tooltip  label="create memory snapshot" type="is-light">
+              <b-tooltip  label="create a disk image" type="is-light">
                 <b-button class="button is-light" icon-left="database" @click="processMultiVmAction(vmActions.createMemorySnapshot)">
                 </b-button>
               </b-tooltip>
@@ -2323,6 +2323,7 @@
             this.memoryDumpModal.vm[i].nameErrType = '';
             this.memoryDumpModal.vm[i].nameErrMsg = '';
         }
+
         return true;
       },
 
