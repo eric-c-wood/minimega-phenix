@@ -64,7 +64,7 @@
           <div  v-if="experimentUser() && !showModifyStateBar && expModal.vm.running">
               &nbsp;  
              <b-tooltip label="record screenshot" type="is-light">
-               <b-button  class="button is-light" icon-left="photo-video" @click="notImplemented()">
+               <b-button  class="button is-light" icon-left="video" @click="notImplemented()">
                </b-button>
              </b-tooltip>
            </div>             
@@ -114,7 +114,7 @@
       </footer>
     </div>
   </b-modal>
-  <b-modal  :active.sync="vlanModal.active" has-modal-card>
+  <b-modal  :active.sync="vlanModal.active" has-modal-card ref="changeVlanModal">
     <div class="modal-card" style="width:25em">
       <header class="modal-card-head">
         <p class="modal-card-title">Change the VLAN</p>
@@ -136,6 +136,10 @@
           </b-field>
         </section>
         <footer class="modal-card-foot buttons is-right">
+          <button  class="button" type="button" 
+              @click="closeModal('changeVlanModal')">
+              Cancel
+           </button>  
           <button class="button is-success" 
             @click="changeVlan( vlanModal.vmNetIndex, vlan, vlanModal.vmFromNet, vlanModal.vmName )">
             Change
@@ -795,6 +799,17 @@
               }
 
               case  'redeploying': {
+                
+                for ( let i = 0; i < vms.length; i++ ) {
+                  if  ( vms[i].name == vm[ 1 ] ) {
+                    vms[i].busy = true; 
+                    //vms[i].percent = percent;
+
+                    this.experiment.vms = [ ... vms ];
+
+                    break;
+                  }
+                }
                 break;
               }
                     
@@ -804,36 +819,23 @@
               }
         
               case  'redeployed': {
-                this.$buefy.toast.open({
-                  message:  'Redeployed ' + vm[ 1 ],
-                  type: 'is-success'
-                });
-                var i=0;
-                for (i=0; this.redeployModal.actionsQueue.length; i++) {
-                  if  (this.redeployModal.actionsQueue[i].name == vm [ 1 ]) {
-                    break;
+                for ( let i = 0; i < vms.length; i++ ) {
+                  if  ( vms[i].name == vm[ 1 ] ) {
+                    vms[i].busy = false;                    
+                    vms[i] = msg.result;                      
+                  
+                    this.$buefy.toast.open({
+                        message: 'Redeployed ' + vm[ 1 ],
+                        type: 'is-success',
+                        duration: 4000
+                      });
+                    
+                      this.experiment.vms = [ ...vms ];
+                      break;
+                    }                
+                    
                   }
-                }
-                this.redeployModal.actionsQueue.splice( i, 1 );
-                if(this.redeployModal.actionsQueue.length > 0) {
-                  let url = this.redeployModal.actionsQueue[0].url;
-                  let body  = this.redeployModal.actionsQueue[0].body;
-                  let name  = this.redeployModal.actionsQueue[0].name;
-                  this.$http.post(url,  body)
-                   .then(null,response  => {
-                     this.$buefy.toast.open({
-                     message: 'Redeploying the ' + name + ' VM failed with ' + response.status + ' status.',
-                     type: 'is-danger',
-                     duration: 4000
-                   });
-                  })
-                } else { 
-                  this.redeployModal.active = false;  
-                  this.resetRedeployModal();
-                  this.isWaiting  = false;
-                }
- 
-                break;
+                
               }
             }
 
@@ -849,7 +851,7 @@
               case  'commit': {
                 for ( let i = 0; i < vms.length; i++ ) {
                   if  ( vms[i].name == vm[ 1 ] ) {
-                    vms[i].busy = false;
+                    vms[i].busy = false;                    
                     vms[i] = msg.result.vm;
 
                       let disk  = msg.result.disk;
@@ -859,9 +861,11 @@
                         type: 'is-success',
                         duration: 4000
                       });
+                      this.experiment.vms = [ ...vms ];
+                      break;
                     }
                 
-                    this.experiment.vms = [ ...vms ];
+                    
                   }
                   break;
                 }
@@ -886,9 +890,9 @@
                     });
                 
                     this.experiment.vms = [ ...vms ];
+                    break;
                   }
-
-                  break;
+                  
                 }
 
                 break;
@@ -931,7 +935,7 @@
                 for ( let i = 0; i < vms.length; i++ ) {
                   if  ( vms[i].name == vm[ 1 ] ) {
                     vms[i].busy = false;
-                    vms[i] = msg.result.vm;
+                    vms[i] = msg.result.vm;                    
 
                       let disk  = msg.result.disk;
                   
@@ -940,9 +944,11 @@
                         type: 'is-success',
                         duration: 4000
                       });
+                      this.experiment.vms = [ ...vms ];
+                      break;
                     }
                 
-                    this.experiment.vms = [ ...vms ];
+                    
                   }
                   break;
                 }
@@ -967,9 +973,10 @@
                     });
                 
                     this.experiment.vms = [ ...vms ];
+                    break;
                   }
 
-                  break;
+                  
                 }
 
                 break;
@@ -1093,9 +1100,11 @@
                       type: 'is-success',
                       duration: 4000
                     });
+                    this.experiment.vms = [ ...vms  ];
+                    break;
                   }
 
-                  this.experiment.vms = [ ...vms  ];
+                  
                 }
 
                 break;
@@ -1112,9 +1121,11 @@
                       type: 'is-warning',
                       duration: 4000
                     });
+                    this.experiment.vms = [ ...vms  ];
+                    break;
                   }
               
-                  this.experiment.vms = [ ...vms  ];
+                  
                 }
 
                 break;
@@ -1146,9 +1157,11 @@
                       type: 'is-success',
                       duration: 4000
                     });
+                    this.experiment.vms = [ ...vms  ];
+                    break;
                   }
 
-                  this.experiment.vms = [ ...vms  ];
+                  
                 }
 
                 break;
@@ -1165,9 +1178,11 @@
                       type: 'is-warning',
                       duration: 4000
                     });
+                    this.experiment.vms = [ ...vms  ];
+                    break;
                   }
               
-                  this.experiment.vms = [ ...vms  ];
+                  
                 }
 
                 break;
@@ -2142,38 +2157,49 @@
         })
 
         this.redeployModal.active = true;
-      },
-      
-      closeModal(modalName) {      
-        this.$refs[modalName].cancel('x')
-      },
-      
+      },     
+            
       redeployVm  (vms) {
         let body = "";
         let url = "";
-  let name = "";
+        let name = "";
         vms.forEach((vm,_) => {
           body = { "cpus": parseInt(vm.cpus), "ram": parseInt(vm.ram), "disk": vm.disk }
           url = 'experiments/' + this.$route.params.id + '/vms/' + vm.name + '/redeploy'
-      name = vm.name;
+          name = vm.name;
           if  ( vm.inject ) {
             url += '?replicate-injects=true'
           }
-          this.redeployModal.actionsQueue.push({name: vm.name,  url: url, body:body});
-       })
-     //kick off the first one
-       this.$http.post(url, body)
-         .then(null,response => {
-           this.$buefy.toast.open({
-             message: 'Redeploying the ' + name + ' VM failed with ' + response.status + ' status.',
-             type: 'is-danger',
-             duration: 4000
+          this.$http.post(url, body).then(null,response => {            
+            let tmpArray = response.url.split('/')
+            name = tmpArray[tmpArray.length -2]            
+            
+            //Turn off the busy indicator on failure
+            let vms = this.experiment.vms;
+            for ( let i = 0;  i < vms.length; i++ ) {
+              if ( vms[i].name == name ) {                                         
+                vms[i].busy  = false;
+                this.experiment.vms = [ ...vms  ];
+                break;
+               }
+            }
+            
+            this.$buefy.toast.open({
+              message: 'Redeploying the ' + name + ' VM failed with ' + response.status + ' status.',
+              type: 'is-danger',
+              duration: 4000
            });
          })
+          
+       })
+     
 
-         this.isWaiting = true;
-//        this.redeployModal.active = false;
-//        this.resetRedeployModal();
+      this.resetRedeployModal();
+      },
+        
+        
+      closeModal(modalName) {      
+        this.$refs[modalName].cancel('x')
       },
 
       changeVlan  ( index, vlan, from, name ) {        
@@ -2453,8 +2479,7 @@
         },
         redeployModal: {
           active: false,
-          vm:[],
-          actionsQueue: [],
+          vm:[],          
           name: null,
           cpus: null,
           ram:  null,

@@ -82,7 +82,7 @@ func (Minimega) GetLaunchProgress(ns string, expected int) (float64, error) {
 	// `ns queue` will be empty once queued VMs have been launched.
 
 	if queued == 0 {
-		cmd.Command = "vm info"
+		cmd.Command = "vm info summary"
 		cmd.Columns = []string{"state"}
 
 		status := mmcli.RunTabular(cmd)
@@ -229,7 +229,7 @@ func (Minimega) GetVNCEndpoint(opts ...Option) (string, error) {
 
 	cmd := mmcli.NewNamespacedCommand(o.ns)
 	cmd.Command = "vm info"
-	cmd.Columns = []string{"host", "vnc_port"}
+	cmd.Columns = []string{"host", "vnc_port","type"}
 	cmd.Filters = []string{"type=kvm", fmt.Sprintf("name=%s", o.vm)}
 
 	var endpoint string
@@ -362,10 +362,14 @@ func (Minimega) RedeployVM(opts ...Option) error {
 		return fmt.Errorf("scheduling VM %s in namespace %s: %w", o.vm, o.ns, err)
 	}
 
+	/*
+	This command can result in a race condition when multiple redeploy requests
+	are handled at almost the same time.  An error will occur when another thread
+	empties the queue.  Perhaps, the best way to handle this situation is to let
+	the "vm start" command fail when the launch command fails
+	*/
 	cmd.Command = "vm launch"
-	if err := mmcli.ErrorResponse(mmcli.Run(cmd)); err != nil {
-		return fmt.Errorf("launching scheduled VMs in namespace %s: %w", o.ns, err)
-	}
+	mmcli.ErrorResponse(mmcli.Run(cmd))
 
 	cmd.Command = fmt.Sprintf("vm start %s", o.vm)
 
@@ -410,7 +414,7 @@ func (Minimega) GetVMState(opts ...Option) (string, error) {
 	o := NewOptions(opts...)
 
 	cmd := mmcli.NewNamespacedCommand(o.ns)
-	cmd.Command = "vm info"
+	cmd.Command = "vm info summary"
 	cmd.Columns = []string{"state"}
 	cmd.Filters = []string{"name=" + o.vm}
 
