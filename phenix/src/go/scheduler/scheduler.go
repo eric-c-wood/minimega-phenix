@@ -38,7 +38,15 @@ func List() []string {
 func Schedule(name string, spec ifaces.ExperimentSpec) error {
 	scheduler, ok := schedulers[name]
 	if !ok {
-		scheduler = new(userScheduler)
+		switch name {			
+			case "isolate-experiment":
+				scheduler = new(isolateExperiment)
+			case "round-robin":
+				scheduler = new(roundRobin)
+			default:			
+				scheduler = new(userScheduler)
+		}
+		
 		scheduler.Init(Name(name))
 	}
 

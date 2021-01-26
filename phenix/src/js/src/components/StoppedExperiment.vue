@@ -170,7 +170,7 @@
                 <b-table-column field="disk" label="Disk">
                   <template v-if="adminUser()">
                     <b-tooltip label="menu for assigning vm(s) disk" type="is-dark">
-                      <b-select :value="props.row.disk" @input="( value ) => assignDisk( props.row.name, value )">
+                      <b-select :value="getShortDiskName(props.row.disk)" expanded @input="( value ) => assignDisk( props.row.name, value )">
                         <option
                           v-for="( d, index ) in disks"
                           :key="index"
@@ -185,7 +185,7 @@
                   </template>
                 </b-table-column>
                 <b-table-column v-if="experimentUser()" label="Boot" centered>
-                  <b-tooltip label="control whether or not VM boots" type="is-dark">
+                  <b-tooltip :label="getBootLabel(props.row.name,props.row.dnb)" type="is-dark">
                     <div @click="updateDnb(props.row.name, !props.row.dnb)">
                       <font-awesome-icon :class="bootDecorator(props.row.dnb)" icon="bolt" />
                     </div>
@@ -302,9 +302,9 @@
         return [ 'Experiment Viewer' ].includes( this.$store.getters.role );
       },
 
-      bootDecorator ( dnb ) {
+      bootDecorator ( dnb ) {        
         if ( dnb ) {
-          return '';
+          return 'dnb';
         } else {
           return 'boot';
         }
@@ -317,8 +317,8 @@
         });
       },
     
-      handle ( msg ) {
-        switch ( msg.resource.type ) {
+      handle ( msg ) {        
+        switch ( msg.resource.type ) {          
           case 'experiment': {
             // We only care about experiment publishes pertaining to the
             // schedule action when in a stopped experiment.
@@ -326,7 +326,7 @@
               return;
             }
 
-            let vms = this.experiment.vms;
+            let vms = this.experiment.vms;            
 
             for ( let i = 0; i < msg.result.schedule.length; i++ ) {
               for ( let j = 0; i < vms.length; j++ ) {
@@ -377,9 +377,9 @@
       },
       
       updateExperiment () {
-        this.$http.get( 'experiments/' + this.$route.params.id ).then(
+        this.$http.get( 'experiments/' + this.$route.params.id + '?show_dnb=true').then(
           response => {
-            response.json().then( state => {
+            response.json().then( state => {             
               this.experiment = state;
               this.isWaiting = false;
             });
@@ -732,7 +732,7 @@
                 let vms = this.experiment.vms;
                 
                 for ( let i = 0; i < vms.length; i++ ) {
-                  if ( vms[i].name == response.body.name ) {
+                  if ( vms[i].name == response.body.name ) {                    
                     vms[i] = response.body;
                     break;
                   }
@@ -765,14 +765,14 @@
         })
       },
 
-      updateDnb ( name, dnb ) {
+      updateDnb ( name, dnb ) {        
         if ( dnb ) {
           this.$buefy.dialog.confirm({
             title: 'Set Do NOT Boot',
             message: 'This will set the ' + name + ' VM to NOT boot when the experiment starts.',
             cancelText: 'Cancel',
             confirmText: 'Do NOT Boot',
-            type: 'is-warning',
+            type: 'is-danger',
             hasIcon: true,
             onConfirm: () => {
               this.isWaiting = true;
@@ -783,7 +783,7 @@
                 'experiments/' + this.$route.params.id + '/vms/' + name, update
               ).then(
                 response => {
-                  let vms = this.experiment.vms;
+                  let vms = this.experiment.vms;                  
                 
                   for ( let i = 0; i < vms.length; i++ ) {
                     if ( vms[i].name == response.body.name ) {
@@ -908,7 +908,23 @@
             )
           }
         })
-      }
+      },
+      
+      getBootLabel(vmName,dnb) {
+        return dnb ? "Boot " + vmName : "Do Not Boot " + vmName;
+        
+      },
+      
+      //The Buefy select component appears to be filtering path separators
+      //This function is a temporary fix until this can be further investigated
+      getShortDiskName(diskName) { 
+        
+        return diskName.indexOf('/') === -1 ? diskName : diskName.split('/').slice(-1)[0];       
+                 
+      },
+      
+      
+      
     },
 
     data () {
@@ -927,8 +943,8 @@
           vm: []
         },
         schedules: [
-          'isolate_experiment',
-          'round_robin',
+          'isolate-experiment',
+          'round-robin',
         ],
         experiment: [],
         files: [],
@@ -950,7 +966,13 @@
   }
   
   svg.fa-bolt.boot {
-    color: #c46200;
+    /*color: #c46200;*/
+    color: #33cc33;
+  }
+  
+  svg.fa-bolt.dnb {
+    /*color: #c46200;*/
+    color: #ff0000;
   }
 
   div.autocomplete >>> a.dropdown-item {
