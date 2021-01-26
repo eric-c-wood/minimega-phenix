@@ -42,7 +42,7 @@
         </div>
         <div v-if="experimentUser() && !showModifyStateBar && expModal.vm.running">
              &nbsp; 
-          <b-tooltip  label="create a disk image" type="is-light">
+          <b-tooltip  label="Dump memory" type="is-light">
             <b-button class="button is-light" icon-left="database" @click="memoryDump(expModal.vm.name)">
              </b-button>
           </b-tooltip>
@@ -255,7 +255,7 @@
     <b-modal :active.sync="memoryDumpModal.active" has-modal-card :on-cancel="resetMemoryDumpModal" ref="memoryDump">
       <div  class="modal-card" style="width:auto">
         <header class="modal-card-head">
-          <p  class="modal-card-title">Create a Disk Image</p>
+          <p  class="modal-card-title">Dump memory</p>
         </header>
         <section class="modal-card-body">
          <div v-if="memoryDumpModal.vm.length > 0">
@@ -263,7 +263,7 @@
                  <div class="level-item">             
                   <font color="#202020">
                     <hr v-if="parseInt(index) > 0" style="color:#595959;background-color:#595959">
-                        Create memory capture of the {{ vmI.name }} VM with filename:                 
+                        Create a memory dump for the {{ vmI.name }} VM with filename:                 
                         <br><br>
                         <b-field :type="vmI.nameErrType" :message="vmI.nameErrMsg" autofocus>
                           <b-input  type="text" v-model="vmI.filename"   focus></b-input>
@@ -320,7 +320,7 @@
             </div>
           <div  v-if="experimentUser() && !showModifyStateBar">
               &nbsp;  
-              <b-tooltip  label="create a disk image" type="is-light">
+              <b-tooltip  label="Dump memory" type="is-light">
                 <b-button class="button is-light" icon-left="database" @click="processMultiVmAction(vmActions.createMemorySnapshot)">
                 </b-button>
               </b-tooltip>
@@ -936,7 +936,7 @@
                       let disk  = msg.result.disk;
                   
                       this.$buefy.toast.open({
-                        message: 'The memory snapshot with name ' + disk + ' for the ' + vm[ 1 ] + ' VM was successfully created.',
+                        message: 'A aemory dump was created with name ' + disk + ' for the ' + vm[ 1 ] + ' VM was successfully created.',
                         type: 'is-success',
                         duration: 4000
                       });
@@ -961,7 +961,7 @@
                     let disk = msg.result.disk;
                 
                     this.$buefy.toast.open({
-                      message:  'A memory snapshot with name ' + disk + ' for the ' + vm[ 1 ] + ' VM is being created.',
+                      message:  'A memory dump with name ' + disk + ' for the ' + vm[ 1 ] + ' VM is being created.',
                       type: 'is-warning',
                       duration: 4000
                     });
@@ -1516,7 +1516,7 @@
           
           this.$http.post(url,body,{ timeout: 0 }).then(
             response => {
-               console.log('memory snapshot for vm ' + name + ' failed with ' + response.status);
+               console.log('memory dump for vm ' + name + ' failed with ' + response.status);
             });
         });
       },
