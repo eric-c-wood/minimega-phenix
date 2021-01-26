@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if command -v systemctl &> /dev/null ; then
+if [[ $(cat /proc/1/comm) == "systemd" ]]; then
   echo "Stopping minimega, miniweb, and phenix services..."
 
   for unit in phenix miniweb minimega; do

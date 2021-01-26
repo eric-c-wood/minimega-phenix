@@ -1,5 +1,5 @@
 #!/bin/bash
 
-if command -v systemctl &> /dev/null ; then
+if [[ $(cat /proc/1/comm) == "systemd" ]]; then
   systemctl daemon-reload &> /dev/null
 fi
