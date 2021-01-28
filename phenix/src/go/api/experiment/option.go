@@ -14,6 +14,7 @@ type createOptions struct {
 	vlanMin  int
 	vlanMax  int
 	baseDir  string
+	vlanAliases map[string]int
 }
 
 func newCreateOptions(opts ...CreateOption) createOptions {
@@ -25,6 +26,10 @@ func newCreateOptions(opts ...CreateOption) createOptions {
 
 	if o.baseDir == "" {
 		o.baseDir = common.PhenixBase + "/experiments/" + o.name
+	}
+	
+	if o.vlanAliases == nil {
+		o.vlanAliases = make(map[string]int)	
 	}
 
 	return o
@@ -63,6 +68,19 @@ func CreateWithVLANMax(m int) CreateOption {
 func CreateWithBaseDirectory(b string) CreateOption {
 	return func(o *createOptions) {
 		o.baseDir = b
+	}
+}
+
+func CreateWithAliases(alias string, vlan int) CreateOption {
+	return func(o *createOptions) {
+		
+		if vlan != 0 {
+			if o.vlanAliases == nil {
+				o.vlanAliases = make(map[string]int)	
+			}
+			o.vlanAliases[alias] = vlan
+		}
+		
 	}
 }
 

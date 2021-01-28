@@ -65,7 +65,8 @@ message CreateExperimentRequest {
 	string topology = 2;
 	string scenario = 3;
 	uint32 vlan_min = 4 [json_name="vlan_min"];
-	uint32 vlan_max = 5 [json_name="vlan_max"];
+	uint32 vlan_max = 5 [json_name="vlan_max"];	
+	VLAN vlan_alias = 6 [json_name="vlan_alias"];
 }
 
 message SnapshotRequest {
@@ -101,4 +102,8 @@ message UpdateScheduleRequest {
 
 message AppList {
 	repeated string applications = 1;
+}
+
+message VlanAliasList {
+	repeated string aliases = 1;
 }
