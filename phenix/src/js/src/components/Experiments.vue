@@ -851,6 +851,42 @@
           return false; 
           
         }
+        
+        //Make sure both vlan_min and vlan_max are filled in
+        let emptyVlanMin = false;
+        let emptyVlanMax = false;
+        
+        
+        if (this.createModal.vlan_min == null || this.createModal.vlan_min == "" || 
+              this.createModal.vlan_min === undefined)
+        {
+          emptyVlanMin = true;
+          
+        }
+        
+        
+        if (this.createModal.vlan_max == null || this.createModal.vlan_max == "" || 
+              this.createModal.vlan_max === undefined)
+        {
+          emptyVlanMax = true;
+          
+        }
+        
+        //If both are empty or filled in
+        if (emptyVlanMin && emptyVlanMax)  {
+          return true; 
+          
+        }
+        else if (!(emptyVlanMin || emptyVlanMax)){
+          
+          return true;
+        }
+        else {
+          return false; 
+          
+        }
+        
+        
         return true;
         
         
