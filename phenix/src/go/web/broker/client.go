@@ -318,8 +318,16 @@ func (this *Client) screenshots() {
 			expName := this.vms[0].exp
 			exp, err := experiment.Get(expName)
 			
-			if err != nil {
-				log.Error("getting experiment %s for WebSocket client: %v", expName, err)
+			//If there is an error retrieving the experiment, then the
+			//experiment most likely has been deleted
+			if err != nil {	
+				/*
+					Clear vms so that we do not request an experiment that has been
+					deleted.  vms will be refreshed on next client read request which
+					will occur when a new experiment is being requested
+				*/
+				
+				this.vms = nil
 				continue
 			}
 			
