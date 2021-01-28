@@ -617,8 +617,7 @@
 
         this.isWaiting= true;
         
-        window.console.log(experimentData);
-        
+                
         this.$http.post(
           'experiments', experimentData, { timeout: 0 } 
         ).then(
@@ -720,15 +719,14 @@
           return false;
         }
 
-        if ( this.createModal.vlan_max < this.createModal.vlan_min ) {
-          return false;
-        }
-
+       
+        
         if (this.showMgntVlans())
         {         
           return !this.mgntVlansValid ? false : true
           
         }
+        
         
         return this.isVLANRangeValid() ? true : false;
         
@@ -827,32 +825,29 @@
       
       isVLANRangeValid() {
         
-        if ( this.createModal.vlan_min < 0 ) {           
+        if ( this.createModal.vlan_min < 0 ) {             
           return false;
         }
 
-        if ( this.createModal.vlan_min > 4094 ) {
+        if ( parseInt(this.createModal.vlan_min) > 4094 ) {          
           return false;
         }
 
-        if ( this.createModal.vlan_max < 0 ) {
+        if ( parseInt(this.createModal.vlan_max) < 0 ) {          
           return false;
         }
 
-        if ( this.createModal.vlan_max > 4094 ) {
+        if ( parseInt(this.createModal.vlan_max) > 4094 ) {          
           return false;
         }
         
-        if ( parseInt(this.createModal.vlan_min) > parseInt(this.createModal.vlan_max) ) {
+        if ( parseInt(this.createModal.vlan_min) > parseInt(this.createModal.vlan_max) ) {          
           return false;
-        }
-        
-        if ( parseInt(this.createModal.vlan_max) < parseInt(this.createModal.vlan_min) ) {
-          return false;
-        }
-        
-        if (parseInt(this.createModal.vlan_min) === 0 || parseInt(this.createModal.vlan_max) === 0)
+        }        
+                
+        if (parseInt(this.createModal.vlan_min) === 0 || parseInt(this.createModal.vlan_max) === 0) 
         {
+         
           return false; 
           
         }
