@@ -299,7 +299,7 @@ func (this *Client) write() {
 func (this *Client) screenshots() {
 	defer this.Stop()
 
-	ticker := time.NewTicker(5 * time.Second)
+	ticker := time.NewTicker(5 * time.Second)	
 
 	defer ticker.Stop()
 
@@ -310,7 +310,7 @@ func (this *Client) screenshots() {
 		case <-ticker.C:
 			
 			
-			//Do not get screenshots for experiments that are not running
+			//Do not get screenshots when there are no experiments being viewd
 			if this.vms == nil {
 				continue
 			}
@@ -318,12 +318,20 @@ func (this *Client) screenshots() {
 			expName := this.vms[0].exp
 			exp, err := experiment.Get(expName)
 			
-			if err != nil {
-				log.Error("getting experiment %s for WebSocket client: %v", expName, err)
+			//If there is an error retrieving the experiment, then the
+			//experiment most likely has been deleted
+			if err != nil {	
+				/*
+					Clear vms so that we do not request an experiment that has been
+					deleted.  vms will be refreshed on next client read request which
+					will occur when a new experiment is being requested
+				*/
+				
+				this.vms = nil								
 				continue
 			}
 			
-			if !exp.Running() {
+			if !exp.Running() {				
 				continue
 				
 			}
@@ -372,5 +380,6 @@ func ServeWS(w http.ResponseWriter, r *http.Request) {
 
 	role := r.Context().Value("role").(rbac.Role)
 
+	log.Info("Creating Client for Request:%v",r)
 	NewClient(role, conn).Go()
 }
