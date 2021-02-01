@@ -51,6 +51,8 @@ type Client struct {
 
 	publish chan interface{}
 	done    chan struct{}
+	cancel	chan bool
+	sendingScreenshots bool
 	once    sync.Once
 
 	// Track the VMs this client currently has in view, if any, so we know
@@ -67,6 +69,7 @@ func NewClient(role rbac.Role, conn *websocket.Conn) *Client {
 		conn:    conn,
 		publish: make(chan interface{}, 256),
 		done:    make(chan struct{}),
+		cancel:  make(chan bool),		
 	}
 }
 
@@ -75,7 +78,7 @@ func (this *Client) Go() {
 
 	go this.write()
 	go this.read()
-	go this.screenshots()
+	
 }
 
 func (this *Client) Stop() {
@@ -86,7 +89,7 @@ func (this *Client) stop() {
 	unregister <- this
 	close(this.done)
 	this.conn.Close()
-
+	
 	log.Debug("[gophenix] WS client destroyed")
 }
 
@@ -119,15 +122,30 @@ func (this *Client) read() {
 			continue
 		}
 
+		if !this.sendingScreenshots {
+			go this.screenshots()
+		}
+
+		
 		switch req.Resource.Type {
 		case "experiment/vms":
+		case "experiment/vms/screenshots":
+			switch req.Resource.Action {
+				case "cancel":
+					this.cancel <- true
+					continue
+				
+				
+				
+			}
+		
 		default:
 			log.Error("unexpected WebSocket request resource type: %s", req.Resource.Type)
 			continue
 		}
 
 		switch req.Resource.Action {
-		case "list":
+		case "list":		
 		default:
 			log.Error("unexpected WebSocket request resource action: %s", req.Resource.Action)
 			continue
@@ -297,8 +315,9 @@ func (this *Client) write() {
 }
 
 func (this *Client) screenshots() {
-	defer this.Stop()
 
+	this.sendingScreenshots = true	
+	
 	ticker := time.NewTicker(5 * time.Second)
 
 	defer ticker.Stop()
@@ -306,11 +325,23 @@ func (this *Client) screenshots() {
 	for {
 		select {
 		case <-this.done:
+			this.sendingScreenshots = false			
+			return
+		case <-this.cancel:
+			this.sendingScreenshots = false			
 			return
 		case <-ticker.C:
 			this.RLock()
 
-			for _, v := range this.vms {
+			for _, v := range this.vms {				
+								
+				//Do not get screenshots for vms that are not running
+				state,err := mm.GetVMState(mm.NS(v.exp), mm.VMName(v.name))				
+				if state != "RUNNING" || err != nil {
+					continue	
+				}		
+				
+
 				screenshot, err := util.GetScreenshot(v.exp, v.name, "200")
 				if err != nil {
 					log.Error("getting screenshot for WebSocket client: %v", err)
@@ -346,4 +377,5 @@ func ServeWS(w http.ResponseWriter, r *http.Request) {
 	role := r.Context().Value("role").(rbac.Role)
 
 	NewClient(role, conn).Go()
+	
 }
