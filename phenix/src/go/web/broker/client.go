@@ -50,9 +50,7 @@ type Client struct {
 	conn *websocket.Conn
 
 	publish chan interface{}
-	done    chan struct{}
-	cancel	chan bool
-	sending	chan bool	
+	done    chan struct{}		
 	once    sync.Once
 
 	// Track the VMs this client currently has in view, if any, so we know
@@ -68,9 +66,7 @@ func NewClient(role rbac.Role, conn *websocket.Conn) *Client {
 		role:    role,
 		conn:    conn,
 		publish: make(chan interface{}, 256),
-		done:    make(chan struct{}),
-		cancel:  make(chan bool),	
-		sending: make(chan bool),	
+		done:    make(chan struct{}),			
 	}
 }
 
@@ -79,6 +75,7 @@ func (this *Client) Go() {
 
 	go this.write()
 	go this.read()
+	go this.screenshots()
 	
 }
 
@@ -97,8 +94,7 @@ func (this *Client) stop() {
 func (this *Client) read() {
 	defer this.Stop()
 
-	var sendingScreenshots bool
-
+	
 	this.conn.SetReadLimit(maxMsgSize)
 	this.conn.SetReadDeadline(time.Now().Add(pongWait))
 
@@ -124,24 +120,16 @@ func (this *Client) read() {
 			log.Error("cannot unmarshal request JSON: %v", err)
 			continue
 		}
-
-		if !sendingScreenshots {
-			go this.screenshots()
-			sendingScreenshots,_ = <-this.sending	
-		}
-
 		
 		switch req.Resource.Type {
 		case "experiment/vms":
 		case "experiment/vms/screenshots":
 			switch req.Resource.Action {
-				case "cancel":
-					this.cancel <- true
-					sendingScreenshots,_ = <-this.sending
-					continue
-				
-				
-				
+				case "cancel":					
+					this.Lock()
+					this.vms = nil
+					this.Unlock()
+					continue				
 			}
 		
 		default:
@@ -320,8 +308,8 @@ func (this *Client) write() {
 }
 
 func (this *Client) screenshots() {
-
-	this.sending <- true
+	defer this.Stop()
+	
 	ticker := time.NewTicker(5 * time.Second)
 
 	defer ticker.Stop()
@@ -329,12 +317,17 @@ func (this *Client) screenshots() {
 	for {
 		select {
 		case <-this.done:								
-			return
-		case <-this.cancel:	
-			this.sending <- false				
-			return
+			return		
 		case <-ticker.C:
 			this.RLock()
+
+			//No experiments are running
+			//if this.vms has not been initialized in the
+			//read thread via a list request
+			if this.vms == nil {
+				this.RUnlock()
+				continue
+			}
 
 			for _, v := range this.vms {				
 								
