@@ -52,7 +52,7 @@ type Client struct {
 	publish chan interface{}
 	done    chan struct{}
 	cancel	chan bool
-	sendingScreenshots bool
+	sending	chan bool	
 	once    sync.Once
 
 	// Track the VMs this client currently has in view, if any, so we know
@@ -69,7 +69,8 @@ func NewClient(role rbac.Role, conn *websocket.Conn) *Client {
 		conn:    conn,
 		publish: make(chan interface{}, 256),
 		done:    make(chan struct{}),
-		cancel:  make(chan bool),		
+		cancel:  make(chan bool),	
+		sending: make(chan bool),	
 	}
 }
 
@@ -95,6 +96,8 @@ func (this *Client) stop() {
 
 func (this *Client) read() {
 	defer this.Stop()
+
+	var sendingScreenshots bool
 
 	this.conn.SetReadLimit(maxMsgSize)
 	this.conn.SetReadDeadline(time.Now().Add(pongWait))
@@ -122,8 +125,9 @@ func (this *Client) read() {
 			continue
 		}
 
-		if !this.sendingScreenshots {
+		if !sendingScreenshots {
 			go this.screenshots()
+			sendingScreenshots,_ = <-this.sending	
 		}
 
 		
@@ -133,6 +137,7 @@ func (this *Client) read() {
 			switch req.Resource.Action {
 				case "cancel":
 					this.cancel <- true
+					sendingScreenshots,_ = <-this.sending
 					continue
 				
 				
@@ -316,19 +321,17 @@ func (this *Client) write() {
 
 func (this *Client) screenshots() {
 
-	this.sendingScreenshots = true	
-	
+	this.sending <- true
 	ticker := time.NewTicker(5 * time.Second)
 
 	defer ticker.Stop()
 
 	for {
 		select {
-		case <-this.done:
-			this.sendingScreenshots = false			
+		case <-this.done:								
 			return
-		case <-this.cancel:
-			this.sendingScreenshots = false			
+		case <-this.cancel:	
+			this.sending <- false				
 			return
 		case <-ticker.C:
 			this.RLock()
