@@ -554,11 +554,11 @@
           type: 'is-danger',
           hasIcon: true,
           onConfirm: () => {
+            this.sendScreenshots(name,'cancel')
             this.$http.post(
               'experiments/' + name + '/stop'
             ).then(
-              response => { 
-                this.sendScreenshots(name,'cancel')
+              response => {                 
                 console.log('experiment stopped');
               }, response => {
                 this.$buefy.toast.open({

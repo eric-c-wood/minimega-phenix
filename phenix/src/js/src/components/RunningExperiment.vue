@@ -1174,12 +1174,11 @@
           hasIcon: true,
           onConfirm: () => {
             this.isWaiting= true;
-
+            this.sendScreenshots('cancel');
             this.$http.post(
               'experiments/' + this.$route.params.id + '/stop' 
             ).then(
-              () => {
-                this.sendScreenshots('cancel');
+              () => {                
                 this.$router.replace('/experiments/');
               }, response => {
                 this.$buefy.toast.open({

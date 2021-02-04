@@ -44,16 +44,21 @@ var (
 )
 
 type Client struct {
-	sync.RWMutex
+	sync.RWMutex	
 
 	role rbac.Role
 	conn *websocket.Conn
 
 	publish chan interface{}
-	done    chan struct{}
-	cancel	chan bool
-	sending	chan bool	
+	done    chan struct{}	
+	cancel 	chan bool		
 	once    sync.Once
+	
+
+	// Tracks if the screenshots thread has been
+	// started 
+	sendingScreenshots bool
+	sendMutex sync.RWMutex
 
 	// Track the VMs this client currently has in view, if any, so we know
 	// what screenshots need to periodically be pushed to the client over
@@ -69,8 +74,7 @@ func NewClient(role rbac.Role, conn *websocket.Conn) *Client {
 		conn:    conn,
 		publish: make(chan interface{}, 256),
 		done:    make(chan struct{}),
-		cancel:  make(chan bool),	
-		sending: make(chan bool),	
+		cancel:  make(chan bool),		
 	}
 }
 
@@ -95,9 +99,7 @@ func (this *Client) stop() {
 }
 
 func (this *Client) read() {
-	defer this.Stop()
-
-	var sendingScreenshots bool
+	defer this.Stop()	
 
 	this.conn.SetReadLimit(maxMsgSize)
 	this.conn.SetReadDeadline(time.Now().Add(pongWait))
@@ -125,10 +127,12 @@ func (this *Client) read() {
 			continue
 		}
 
-		if !sendingScreenshots {
-			go this.screenshots()
-			sendingScreenshots,_ = <-this.sending	
+		this.sendMutex.RLock()
+		if !this.sendingScreenshots {
+			go this.screenshots()				
 		}
+
+		this.sendMutex.RUnlock()
 
 		
 		switch req.Resource.Type {
@@ -136,8 +140,7 @@ func (this *Client) read() {
 		case "experiment/vms/screenshots":
 			switch req.Resource.Action {
 				case "cancel":
-					this.cancel <- true
-					sendingScreenshots,_ = <-this.sending
+					this.cancel <- true					
 					continue
 				
 				
@@ -321,7 +324,10 @@ func (this *Client) write() {
 
 func (this *Client) screenshots() {
 
-	this.sending <- true
+	this.sendMutex.Lock()	
+	this.sendingScreenshots = true
+	this.sendMutex.Unlock()
+
 	ticker := time.NewTicker(5 * time.Second)
 
 	defer ticker.Stop()
@@ -331,7 +337,9 @@ func (this *Client) screenshots() {
 		case <-this.done:								
 			return
 		case <-this.cancel:	
-			this.sending <- false				
+			this.sendMutex.Lock()	
+			this.sendingScreenshots = false
+			this.sendMutex.Unlock()				
 			return
 		case <-ticker.C:
 			this.RLock()
