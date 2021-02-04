@@ -50,7 +50,7 @@ type Client struct {
 	conn *websocket.Conn
 
 	publish chan interface{}
-	done    chan struct{}
+	done    chan struct{}		
 	once    sync.Once
 
 	// Track the VMs this client currently has in view, if any, so we know
@@ -66,7 +66,7 @@ func NewClient(role rbac.Role, conn *websocket.Conn) *Client {
 		role:    role,
 		conn:    conn,
 		publish: make(chan interface{}, 256),
-		done:    make(chan struct{}),
+		done:    make(chan struct{}),			
 	}
 }
 
@@ -76,6 +76,7 @@ func (this *Client) Go() {
 	go this.write()
 	go this.read()
 	go this.screenshots()
+	
 }
 
 func (this *Client) Stop() {
@@ -86,13 +87,14 @@ func (this *Client) stop() {
 	unregister <- this
 	close(this.done)
 	this.conn.Close()
-
+	
 	log.Debug("[gophenix] WS client destroyed")
 }
 
 func (this *Client) read() {
 	defer this.Stop()
 
+	
 	this.conn.SetReadLimit(maxMsgSize)
 	this.conn.SetReadDeadline(time.Now().Add(pongWait))
 
@@ -118,16 +120,25 @@ func (this *Client) read() {
 			log.Error("cannot unmarshal request JSON: %v", err)
 			continue
 		}
-
+		
 		switch req.Resource.Type {
 		case "experiment/vms":
+		case "experiment/vms/screenshots":
+			switch req.Resource.Action {
+				case "cancel":					
+					this.Lock()
+					this.vms = nil
+					this.Unlock()
+					continue				
+			}
+		
 		default:
 			log.Error("unexpected WebSocket request resource type: %s", req.Resource.Type)
 			continue
 		}
 
 		switch req.Resource.Action {
-		case "list":
+		case "list":		
 		default:
 			log.Error("unexpected WebSocket request resource action: %s", req.Resource.Action)
 			continue
@@ -298,54 +309,35 @@ func (this *Client) write() {
 
 func (this *Client) screenshots() {
 	defer this.Stop()
-
+	
 	ticker := time.NewTicker(5 * time.Second)
 
 	defer ticker.Stop()
 
 	for {
 		select {
-		case <-this.done:
-			return
+		case <-this.done:								
+			return		
 		case <-ticker.C:
-			
-			
-			//Do not get screenshots for experiments that are not running
-			if this.vms == nil {
-				continue
-			}
-			
-			expName := this.vms[0].exp
-			exp, err := experiment.Get(expName)
-			
-			//If there is an error retrieving the experiment, then the
-			//experiment most likely has been deleted
-			if err != nil {	
-				/*
-					Clear vms so that we do not request an experiment that has been
-					deleted.  vms will be refreshed on next client read request which
-					will occur when a new experiment is being requested
-				*/
-				
-				this.vms = nil
-				continue
-			}
-			
-			if !exp.Running() {
-				continue
-				
-			}
-			
 			this.RLock()
 
-			for _, v := range this.vms {
-				
+			//No experiments are running
+			//if this.vms has not been initialized in the
+			//read thread via a list request
+			if this.vms == nil {
+				this.RUnlock()
+				continue
+			}
+
+			for _, v := range this.vms {				
+								
 				//Do not get screenshots for vms that are not running
 				state,err := mm.GetVMState(mm.NS(v.exp), mm.VMName(v.name))				
 				if state != "RUNNING" || err != nil {
 					continue	
-				}
+				}		
 				
+
 				screenshot, err := util.GetScreenshot(v.exp, v.name, "200")
 				if err != nil {
 					log.Error("getting screenshot for WebSocket client: %v", err)
@@ -381,4 +373,5 @@ func ServeWS(w http.ResponseWriter, r *http.Request) {
 	role := r.Context().Value("role").(rbac.Role)
 
 	NewClient(role, conn).Go()
+	
 }

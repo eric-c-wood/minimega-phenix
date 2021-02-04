@@ -258,6 +258,19 @@
     },
     
     methods: { 
+      sendScreenshots(name,action) {
+      
+        let msg = {
+          resource: {
+            type: 'experiment/vms/screenshots',
+            name: name,
+            action: action
+          }          
+        };
+        this.$socket.send( JSON.stringify( msg ) );
+        
+      },
+
       handler ( event ) {
         event.data.split(/\r?\n/).forEach( m => {
           let msg = JSON.parse( m );
@@ -506,6 +519,7 @@
           type: 'is-danger',
           hasIcon: true,
           onConfirm: () => {
+            this.sendScreenshots(name,'cancel')
             this.$http.post(
               'experiments/' + name + '/stop'
             ).then(
