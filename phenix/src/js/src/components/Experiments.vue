@@ -1,6 +1,6 @@
 <template>
   <div class="content">
-    <b-modal :active.sync="createModal.active" :on-cancel="resetCreateModal" has-modal-card>
+    <b-modal :active.sync="createModal.active" :on-cancel="resetCreateModal" has-modal-card ref="createDialog">
       <div class="modal-card" style="width: auto">
         <header class="modal-card-head">
           <p class="modal-card-title">Create a New Experiment</p>
@@ -39,15 +39,41 @@
               {{ a }}  
             </b-tag>
           </b-taglist>
-          <br><br>
-          <b-field label="VLAN Range">
-            <b-field>
-              <b-input type="number" min="1" max="4094" placeholder="minimum" v-model="createModal.vlan_min" expanded></b-input>
-              <b-input type="number" min="1" max="4094" placeholder="maximum" v-model="createModal.vlan_max" expanded></b-input>
-            </b-field>
-          </b-field>
+          <br>
+           <b-field label="VLAN Range">              
+             <b-field>
+              <b-field>
+              <b-input type="number" min="1" max="4094" placeholder="minimum" v-model="createModal.vlan_min" expanded></b-input>    
+              </b-field>
+               <b-field>
+              <b-input type="number" min="1" max="4094" placeholder="maximum" v-model="createModal.vlan_max" expanded></b-input> 
+              </b-field>
+             </b-field>
+           </b-field>
+          <br>
+          <b-field label="Management VLAN" v-if="showMgntVlans()"> 
+             <b-field>
+               <b-field :type="createModal.vlanMsgAliasType" :message="createModal.vlanMsgAlias">
+              <b-select v-model="createModal.vlanAlias" expanded placeholder="Alias" @input="validateMgntVLAN()">
+                <option v-for="( alias, index ) in createModal.vlanAliases" :key="index" :value="alias">
+                {{ alias }}
+                </option>
+              </b-select> 
+              </b-field>
+              <b-field :type="createModal.vlanMsgType" :message="createModal.vlanMsg">
+                <b-input type="number" min="1" max="4094" placeholder="vlan id" 
+                     v-model="createModal.mgntVlan" expanded   
+                     :use-html5-validation="false" @input="validateMgntVLAN()">
+                </b-input>  
+              </b-field>
+            </b-field>                                                 
+        </b-field>     
         </section>
         <footer class="modal-card-foot buttons is-right">
+          <button  class="button" type="button" 
+              @click="closeModal('createDialog')">
+              Cancel
+          </button>
           <button class="button is-light" :disabled="!validate()" @click="create">Create Experiment</button>
         </footer>
       </div>
@@ -82,7 +108,7 @@
           </button>
         </p>
         &nbsp; &nbsp;
-        <p v-if="globalUser()" class="control">
+        <p v-if="globalUser()" class="control">          
           <b-tooltip label="create a new experiment" type="is-light is-left" multilined>
             <button class="button is-light" @click="updateTopologies(); createModal.active = true">
               <b-icon icon="plus"></b-icon>
@@ -232,6 +258,19 @@
     },
     
     methods: { 
+      sendScreenshots(name,action) {
+      
+        let msg = {
+          resource: {
+            type: 'experiment/vms/screenshots',
+            name: name,
+            action: action
+          }          
+        };
+        this.$socket.send( JSON.stringify( msg ) );
+        
+      },
+
       handler ( event ) {
         event.data.split(/\r?\n/).forEach( m => {
           let msg = JSON.parse( m );
@@ -480,6 +519,7 @@
           type: 'is-danger',
           hasIcon: true,
           onConfirm: () => {
+            this.sendScreenshots(name,'cancel')
             this.$http.post(
               'experiments/' + name + '/stop'
             ).then(
@@ -550,13 +590,23 @@
         }
       },
       
-      create () {      
+      create () {     
+        
+        let vlanAlias = {'vlan':0,'alias':""}
+        
+        if (this.showMgntVlans())
+        {
+          vlanAlias = {'vlan':this.createModal.mgntVlan,'alias':this.createModal.vlanAlias}
+        }
+        
+        
         const experimentData = {
           name: this.createModal.name,
           topology: this.createModal.topology,
           scenario: this.createModal.scenario,
           vlan_min: +this.createModal.vlan_min,
-          vlan_max: +this.createModal.vlan_max
+          vlan_max: +this.createModal.vlan_max,
+          vlan_alias:vlanAlias,           
         }
         
         if ( !this.createModal.name ) {
@@ -581,6 +631,7 @@
 
         this.isWaiting= true;
         
+                
         this.$http.post(
           'experiments', experimentData, { timeout: 0 } 
         ).then(
@@ -601,7 +652,7 @@
         this.resetCreateModal();
       },
 
-      getScenarios ( topo ) {
+      getScenarios ( topo ) {        
         // Reset these values for the case where a topo with scenarios was
         // initially selected, then another topo with no scenarios was
         // subsequently selected.
@@ -615,6 +666,7 @@
                 this.createModal.scenarios = state.scenarios;
                 this.createModal.showScenarios = true;
               }
+              this.getVlanAliases(topo);
             });
           }, response => {
             this.isWaiting = false;
@@ -638,7 +690,10 @@
           scenarios: {},
           scenario: null,
           vlan_min: null,
-          vlan_max: null
+          vlan_max: null,
+          vlanAlias: null,
+          vlanAliases: [],
+          mgmtVLAN:null
         }
       },
       
@@ -665,6 +720,10 @@
         } else if ( this.createModal.name == "create" ) {
           this.createModal.nameErrType = 'is-danger';
           this.createModal.nameErrMsg  = 'experiment names cannot be create!';
+        } 
+        else if ( /[~!@#$%^&*()+=?><;'":,.]/.test( this.createModal.name ) ) {
+          this.createModal.nameErrType = 'is-danger';
+          this.createModal.nameErrMsg  = 'experiment names cannot special characters';
         } else {
           this.createModal.nameErrType = null;
           this.createModal.nameErrMsg  = null;
@@ -674,33 +733,201 @@
           return false;
         }
 
-        if ( this.createModal.vlan_max < this.createModal.vlan_min ) {
-          return false;
+       
+        
+        if (this.showMgntVlans())
+        {         
+          return !this.mgntVlansValid ? false : true
+          
         }
-
-        if ( this.createModal.vlan_min < 0 ) {
-          return false;
-        }
-
-        if ( this.createModal.vlan_min > 4094 ) {
-          return false;
-        }
-
-        if ( this.createModal.vlan_max < 0 ) {
-          return false;
-        }
-
-        if ( this.createModal.vlan_max > 4094 ) {
-          return false;
-        }
-
-        return true;
+        
+        
+        return this.isVLANRangeValid() ? true : false;
+        
+        
       },
       
       getExpControlLabel(expName,expStatus) {
         return expStatus.toUpperCase() == "STARTED" ? "Stop experiment " + expName : "Start experiment " + expName;
         
+      },
+      
+      getVlanAliases ( topo ) { 
+        
+        this.$http.get( 'topologies/' + topo + '/vlanAliases' ).then(
+          response => {
+            response.json().then( jsonObject => {
+              this.createModal.vlanAliases = jsonObject.aliases.sort()              
+              
+              }
+              
+            );
+          }, response => {
+            this.isWaiting = false;
+            this.$buefy.toast.open({
+              message: 'Getting the list of vlan aliases failed.',
+              type: 'is-danger',
+              duration: 4000
+            });
+          }
+        );
+      },
+      
+      validateMgntVLAN() {
+        
+       
+        this.createModal.vlanMsg = null;
+        this.createModal.vlanMsgType = null;
+        this.createModal.vlanMsgAlias = null;
+        this.createModal.vlanMsgAliasType = null;
+        
+        if (this.createModal.mgntVlan == null || this.createModal.mgntVlan == "" 
+                  || this.createModal.vlanAlias === undefined )
+        {
+          if (this.createModal.vlanAlias == null || this.createModal.vlanAlias == ""
+             || this.createModal.vlanAlias === undefined )
+          {
+            this.mgntVlansValid = true;
+            return
+          }
+          else
+          {
+            this.createModal.vlanMsg = 'VLAN is empty';
+            this.createModal.vlanMsgType = 'is-danger'
+            this.mgntVlansValid = false;
+            return
+            
+            
+          }
+          
+        }
+        
+        
+        if (parseInt(this.createModal.mgntVlan) < parseInt(this.createModal.vlan_min))
+        {
+          this.createModal.vlanMsg = 'VLAN is less than the minimum';
+          this.createModal.vlanMsgType = 'is-danger'
+          this.mgntVlansValid = false;
+          return
+           
+        }
+        
+        if (parseInt(this.createModal.mgntVlan) > parseInt(this.createModal.vlan_max))
+        {
+          
+          this.createModal.vlanMsg = 'VLAN is greater than the maximum';
+          this.createModal.vlanMsgType = 'is-danger'
+          this.mgntVlansValid = false;
+          return
+        
+        }
+        
+        if (this.createModal.vlanAlias == null || this.createModal.vlanAlias == "")
+        {
+          
+          this.createModal.vlanMsgAlias = 'VLAN alias is invalid';
+          this.createModal.vlanMsgAliasType = 'is-danger'
+          this.mgntVlansValid = false;
+          return
+          
+        }        
+        
+        this.mgntVlansValid = true;
+        
+        
+      },
+      
+      isVLANRangeValid() {
+        
+        if ( this.createModal.vlan_min < 0 ) {             
+          return false;
+        }
+
+        if ( parseInt(this.createModal.vlan_min) > 4094 ) {          
+          return false;
+        }
+
+        if ( parseInt(this.createModal.vlan_max) < 0 ) {          
+          return false;
+        }
+
+        if ( parseInt(this.createModal.vlan_max) > 4094 ) {          
+          return false;
+        }
+        
+        if ( parseInt(this.createModal.vlan_min) > parseInt(this.createModal.vlan_max) ) {          
+          return false;
+        }        
+                
+        if (parseInt(this.createModal.vlan_min) === 0 || parseInt(this.createModal.vlan_max) === 0) 
+        {
+         
+          return false; 
+          
+        }
+        
+        //Make sure both vlan_min and vlan_max are filled in
+        let emptyVlanMin = false;
+        let emptyVlanMax = false;
+        
+        
+        if (this.createModal.vlan_min == null || this.createModal.vlan_min == "" || 
+              this.createModal.vlan_min === undefined)
+        {
+          emptyVlanMin = true;
+          
+        }
+        
+        
+        if (this.createModal.vlan_max == null || this.createModal.vlan_max == "" || 
+              this.createModal.vlan_max === undefined)
+        {
+          emptyVlanMax = true;
+          
+        }
+        
+        //If both are empty or filled in
+        if (emptyVlanMin && emptyVlanMax)  {
+          return true; 
+          
+        }
+        else if (!(emptyVlanMin || emptyVlanMax)){
+          
+          return true;
+        }
+        else {
+          return false; 
+          
+        }
+        
+        
+        return true;
+        
+        
+      },
+      
+      showMgntVlans() {
+        
+       if (this.createModal.vlan_min <= 0)
+       {
+          return false; 
+       }
+        
+       if (this.createModal.vlan_max <= 0)
+       {
+         return false;
+         
+       }
+         
+        return this.isVLANRangeValid();
+        
+      },
+      
+      closeModal(modalName) {      
+        this.$refs[modalName].cancel('x')
       }
+      
+      
     },
     
     directives: {
@@ -735,7 +962,14 @@
           scenarios: {},
           scenario: null,
           vlan_min: null,
-          vlan_max: null
+          vlan_max: null,
+          vlanAlias: null,
+          vlanAliases: [],
+          mgntVLAN:null,
+          vlanMsg: null,
+          vlanMsgType: null,
+          vlanMsgAlias: null,
+          vlanMsgAliasType: null
         },
         experiments: [],
         topologies: [],
@@ -744,7 +978,8 @@
         isMenuActive: false,
         action: null,
         rowName: null,
-        isWaiting: true
+        isWaiting: true,
+        mgntVlansValid: true
       }
     }
   }
