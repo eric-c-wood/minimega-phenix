@@ -122,16 +122,7 @@ func (this *Client) read() {
 		}
 		
 		switch req.Resource.Type {
-		case "experiment/vms":
-		case "experiment/vms/screenshots":
-			switch req.Resource.Action {
-				case "cancel":					
-					this.Lock()
-					this.vms = nil
-					this.Unlock()
-					continue				
-			}
-		
+		case "experiment/vms":		
 		default:
 			log.Error("unexpected WebSocket request resource type: %s", req.Resource.Type)
 			continue
@@ -321,12 +312,34 @@ func (this *Client) screenshots() {
 		case <-ticker.C:
 			this.RLock()
 
-			//No experiments are running
-			//if this.vms has not been initialized in the
-			//read thread via a list request
+			//Do not get screenshots for experiments that are not running
 			if this.vms == nil {
 				this.RUnlock()
 				continue
+			}
+			
+			expName := this.vms[0].exp
+			exp, err := experiment.Get(expName)
+			
+			//If there is an error retrieving the experiment, then the
+			//experiment most likely has been deleted
+			if err != nil {	
+				
+				// Clear vms so that we do not request an experiment that has been
+				// deleted.  vms will be refreshed on next client list request 
+				
+				this.RUnlock()
+				this.Lock()
+				this.vms = nil
+				this.Unlock()
+				
+				continue
+			}
+			
+			if !exp.Running() {
+				this.RUnlock()
+				continue
+				
 			}
 
 			for _, v := range this.vms {				

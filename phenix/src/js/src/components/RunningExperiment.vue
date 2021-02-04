@@ -452,20 +452,6 @@
       experimentViewer () {
         return [ 'Experiment Viewer' ].includes( this.$store.getters.role );
       },
-      
-      sendScreenshots(action) {
-      
-      let msg = {
-          resource: {
-            type: 'experiment/vms/screenshots',
-            name: this.$route.params.id,
-            action: action
-          }          
-        };
-
-        this.$socket.send( JSON.stringify( msg ) );
-        
-      },
 
       searchVMs( term ) {
         if ( term === null ) {
@@ -1164,7 +1150,7 @@
         this.resetExpModal();
       },
 
-      stop () { 
+      stop () {      
         this.$buefy.dialog.confirm({
           title: 'Stop the Experiment',
           message: 'This will stop the ' + this.$route.params.id + ' experiment.',
@@ -1174,11 +1160,11 @@
           hasIcon: true,
           onConfirm: () => {
             this.isWaiting= true;
-            this.sendScreenshots('cancel');
+
             this.$http.post(
               'experiments/' + this.$route.params.id + '/stop' 
             ).then(
-              () => {                
+              () => {
                 this.$router.replace('/experiments/');
               }, response => {
                 this.$buefy.toast.open({
