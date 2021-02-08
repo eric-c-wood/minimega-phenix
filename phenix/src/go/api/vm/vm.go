@@ -1047,7 +1047,6 @@ func CommitToDisk(expName, vmName, out string, cb func(float64)) (string, error)
 
 }
 
-//-----------------------------------------------------------------------------------------------------------------
 
 func MemorySnapshot(expName, vmName, out string, cb func(string)) (string, error) {
 
@@ -1064,6 +1063,14 @@ func MemorySnapshot(expName, vmName, out string, cb func(string)) (string, error
 			return "", fmt.Errorf("getting new disk name for VM %s in experiment %s: %w", vmName, expName, err)
 		}
 		out = fmt.Sprintf("%s_%s__%s_memorySnapshot.elf", expName, vmName, out)
+	}
+
+	// Make all output file have a .elf extension
+	if filepath.Ext(out) != ".elf" {
+		if filepath.Ext(out) != "" {
+			out = strings.TrimSuffix(out, filepath.Ext(out)) 
+		}
+		out += ".elf"
 	}
 
 	base, err := getBaseImage(expName, vmName)
@@ -1102,7 +1109,7 @@ func MemorySnapshot(expName, vmName, out string, cb func(string)) (string, error
 	cmd.Command = fmt.Sprintf("vm qmp %s '%s'", vmName, qmp)
 
 	if err := mmcli.ErrorResponse(mmcli.Run(cmd)); err != nil {
-		return "", fmt.Errorf("starting memory snapshot for VM %s: ERROR: %w -- cmd: '%s'", vmName, err, cmd)
+		return "", fmt.Errorf("starting memory snapshot for VM %s: ERROR: %w", vmName, err)
 		
 	}
 	
@@ -1117,18 +1124,31 @@ func MemorySnapshot(expName, vmName, out string, cb func(string)) (string, error
 	)
 	
 	for {
-		
+		//sleep before querying the vm to to prevent errors from start delays
+		time.Sleep(1 * time.Second)
 		res, err = mmcli.SingleResponse(mmcli.Run(cmd))
 		if err != nil {
-			cb("failed")
+			if cb != nil {
+				cb("failed")
+			}
 			return "",fmt.Errorf("getting memory dump status for VM %s: %w", vmName, err)
 		}
 		
 		json.Unmarshal([]byte(res), &v)	
 		
 		if len(v.Return.Status) == 0 {
-			cb("failed")
+			if cb != nil {
+				cb("failed")
+			}
 			return "",fmt.Errorf("no status available for %s: %s", vmName, v)
+		
+		}
+
+		if v.Return.Status == "failed" {
+			if cb != nil {
+				cb("failed")
+			}
+			return "failed",fmt.Errorf("failed to create disk image for %s: %s", vmName, v)
 		
 		}
 		
@@ -1140,11 +1160,6 @@ func MemorySnapshot(expName, vmName, out string, cb func(string)) (string, error
 			cb("completed")
 			break	
 		}
-		
-		time.Sleep(1 * time.Second)
-		
-		
-		
 		
 	}
 
