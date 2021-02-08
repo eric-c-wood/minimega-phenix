@@ -123,15 +123,6 @@ func (this *Client) read() {
 		
 		switch req.Resource.Type {
 		case "experiment/vms":
-		case "experiment/vms/screenshots":
-			switch req.Resource.Action {
-				case "cancel":					
-					this.Lock()
-					this.vms = nil
-					this.Unlock()
-					continue				
-			}
-		
 		default:
 			log.Error("unexpected WebSocket request resource type: %s", req.Resource.Type)
 			continue
@@ -319,18 +310,34 @@ func (this *Client) screenshots() {
 		case <-this.done:								
 			return		
 		case <-ticker.C:
-			this.RLock()
-
-			//No experiments are running
-			//if this.vms has not been initialized in the
-			//read thread via a list request
+			this.RLock()		
+			
+			//Do not get screenshots for experiments that are not running
 			if this.vms == nil {
 				this.RUnlock()
 				continue
 			}
 
+			exp, err := experiment.Get(this.vms[0].exp)
+
+			if err != nil {
+				mm.ClearNamespace(this.vms[0].exp)				
+				this.RUnlock()
+				continue
+			}
+
+			// IF the experiment is no longer running
+			// clear the namespace in case one of the clients
+			// recreated the namespace
+			if !exp.Running() {
+				mm.ClearNamespace(this.vms[0].exp)
+				this.RUnlock()
+				continue
+
+			}
+			
 			for _, v := range this.vms {				
-								
+												
 				//Do not get screenshots for vms that are not running
 				state,err := mm.GetVMState(mm.NS(v.exp), mm.VMName(v.name))				
 				if state != "RUNNING" || err != nil {
