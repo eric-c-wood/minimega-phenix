@@ -257,8 +257,8 @@
       
     },
     
-    methods: { 
-      
+
+    methods: {
       handler ( event ) {
         event.data.split(/\r?\n/).forEach( m => {
           let msg = JSON.parse( m );
@@ -506,7 +506,7 @@
           confirmText: 'Stop',
           type: 'is-danger',
           hasIcon: true,
-          onConfirm: () => {
+          onConfirm: () => {            
             this.$http.post(
               'experiments/' + name + '/stop'
             ).then(

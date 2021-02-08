@@ -13,6 +13,7 @@ TEMPLATES := $(shell find tmpl/templates \( -name '*' \))
 THISFILE := $(lastword $(MAKEFILE_LIST))
 THISDIR  := $(shell dirname $(realpath $(THISFILE)))
 GOBIN    := $(THISDIR)/bin
+GOEXE := /usr/local/go1.14.2/bin/go
 
 # Prepend this repo's bin directory to our path since we'll want to
 # install some build tools there for use during the build process.
@@ -47,13 +48,13 @@ remove-build-deps:
 	$(RM) bin/protoc-gen-go
 
 bin/go-bindata:
-	go install github.com/go-bindata/go-bindata/v3/go-bindata
+	$(GOEXE) install github.com/go-bindata/go-bindata/v3/go-bindata
 
 bin/mockgen:
-	go install github.com/golang/mock/mockgen
+	$(GOEXE) install github.com/golang/mock/mockgen
 
 bin/protoc-gen-go:
-	go install google.golang.org/protobuf/cmd/protoc-gen-go
+	$(GOEXE) install google.golang.org/protobuf/cmd/protoc-gen-go
 
 .PHONY: generate-bindata
 generate-bindata: api/config/bindata.go tmpl/bindata.go web/bindata.go
@@ -105,4 +106,4 @@ web/proto/vm.pb.go: web/proto/*.proto bin/protoc-gen-go
 
 bin/phenix: $(GOSOURCES) generate-bindata generate-protobuf
 	mkdir -p bin
-	CGO_ENABLED=0 GOOS=linux go build -a -v -ldflags="-X 'phenix/version.Version=$(VERSION)' -s -w" -trimpath -o bin/phenix main.go
+	CGO_ENABLED=0 GOOS=linux $(GOEXE) build -a -v -ldflags="-X 'phenix/version.Version=$(VERSION)' -s -w" -trimpath -o bin/phenix main.go

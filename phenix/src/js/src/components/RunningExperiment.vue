@@ -670,7 +670,6 @@
         return [ 'Experiment Viewer' ].includes( this.$store.getters.role );        
       },
 
-     
       searchVMs(  term ) {
         if (term === null) {
           term  = '';
