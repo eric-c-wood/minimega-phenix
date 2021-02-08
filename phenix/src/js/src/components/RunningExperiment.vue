@@ -669,20 +669,7 @@
       experimentViewer  () {
         return [ 'Experiment Viewer' ].includes( this.$store.getters.role );        
       },
-
-      sendScreenshots(action) {
       
-      let msg = {
-          resource: {
-            type: 'experiment/vms/screenshots',
-            name: this.$route.params.id,
-            action: action
-          }          
-        };
-        this.$socket.send( JSON.stringify( msg ) );
-        
-      },
-
       searchVMs(  term ) {
         if (term === null) {
           term  = '';
@@ -1630,8 +1617,7 @@
           type: 'is-danger',
           hasIcon:  true,
           onConfirm:  () => {
-            this.isWaiting= true;
-            this.sendScreenshots('cancel');
+            this.isWaiting= true;            
             this.$http.post(
               'experiments/'  + this.$route.params.id + '/stop' 
             ).then(

@@ -321,12 +321,31 @@ func (this *Client) screenshots() {
 		case <-ticker.C:
 			this.RLock()
 
-			//No experiments are running
-			//if this.vms has not been initialized in the
-			//read thread via a list request
+			//Do not get screenshots for experiments that are not running
 			if this.vms == nil {
 				this.RUnlock()
 				continue
+			}
+
+			exp, err := experiment.Get(this.vms[0].exp)
+			
+			// If the experiment has been deleted
+			// clear the namespace in case one of the clients
+			// recreated the namespace
+			if err != nil {
+				mm.ClearNamespace(this.vms[0].exp)				
+				this.RUnlock()
+				continue
+			}
+
+			// If the experiment is no longer running
+			// clear the namespace in case one of the clients
+			// recreated the namespace
+			if !exp.Running() {
+				mm.ClearNamespace(this.vms[0].exp)
+				this.RUnlock()
+				continue
+
 			}
 
 			for _, v := range this.vms {				

@@ -257,20 +257,7 @@
       
     },
     
-    methods: { 
-      sendScreenshots(name,action) {
-      
-        let msg = {
-          resource: {
-            type: 'experiment/vms/screenshots',
-            name: name,
-            action: action
-          }          
-        };
-        this.$socket.send( JSON.stringify( msg ) );
-        
-      },
-
+    methods: {
       handler ( event ) {
         event.data.split(/\r?\n/).forEach( m => {
           let msg = JSON.parse( m );
@@ -518,8 +505,7 @@
           confirmText: 'Stop',
           type: 'is-danger',
           hasIcon: true,
-          onConfirm: () => {
-            this.sendScreenshots(name,'cancel')
+          onConfirm: () => {            
             this.$http.post(
               'experiments/' + name + '/stop'
             ).then(
