@@ -500,15 +500,15 @@ func newVMCaptureCmd() *cobra.Command {
 	return cmd
 }
 
-func newVMDiskImageCmd() *cobra.Command {
+func newVMMemoryDumpCmd() *cobra.Command {
 	desc := `Create disk image  for a VM
 	
   Used to create the VM memory dump for a virtual machine in a running 
   experiment; see command help for start and stop for additional arguments.`
 
 	cmd := &cobra.Command{
-		Use:   "diskimage <experiment name> <vm name> </path/to/out file> [flags]",
-		Short: "Create disk image for a VM",
+		Use:   "memorydump <experiment name> <vm name> </path/to/out file> [flags]",
+		Short: "Create a memory dump for a VM",
 		Long:  desc,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 3 {
@@ -528,15 +528,15 @@ func newVMDiskImageCmd() *cobra.Command {
 			cb := func(s string) {}
 			if res, err := vm.MemorySnapshot(expName, vmName, out, cb); err != nil{
 				if res != "failed" {
-					err := util.HumanizeError(err, "Unable to create disk image for the "+vmName+" VM")
+					err := util.HumanizeError(err, "Unable to create a memory dump for the "+vmName+" VM")
 					return err.Humanized()
 				}else {	
-					err := util.HumanizeError(err, "Failed to create disk image for the "+vmName+" VM")
+					err := util.HumanizeError(err, "Failed to create a memory dump for the "+vmName+" VM")
 					return err.Humanized()
 				}	
 			}
 
-			fmt.Printf("Disk image was created for the %s VM in the %s experiment\n", vmName, expName)
+			fmt.Printf("Memory dump was created for the %s VM in the %s experiment\n", vmName, expName)
 			
 			return nil
 
@@ -560,7 +560,7 @@ func init() {
 	vmCmd.AddCommand(newVMSetCmd())
 	vmCmd.AddCommand(newVMNetCmd())
 	vmCmd.AddCommand(newVMCaptureCmd())
-	vmCmd.AddCommand(newVMDiskImageCmd())
+	vmCmd.AddCommand(newVMMemoryDumpCmd())
 
 	rootCmd.AddCommand(vmCmd)
 }
