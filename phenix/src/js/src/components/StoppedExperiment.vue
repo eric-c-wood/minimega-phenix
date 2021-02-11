@@ -42,6 +42,7 @@
         placeholder="Find a VM"
         icon="search"
         :data="filteredData"
+        @input="searchVMs"
         @select="option => filtered = option">
           <template slot="empty">No results found</template>
       </b-autocomplete>
@@ -254,6 +255,7 @@
       vms: function() {
         let vms = this.experiment.vms;
         
+        /*
         var name_re = new RegExp( this.searchName, 'i' );
         var data = [];
         
@@ -263,12 +265,18 @@
             data.push( vm );
           }
         }
+        */
         
-        return data;
+        return vms;
       },
 
       filteredData () {
-        let names = this.vms.map( vm => { return vm.name; } );
+
+        if (this.experiment.length == 0) {
+          return []
+        }
+        
+        let names = this.experiment.vms.map( vm => { return vm.name; } );
         
         return names.filter(
           option => {
@@ -278,11 +286,11 @@
               .indexOf( this.searchName.toLowerCase() ) >= 0
           }
         )
-      },
+      },      
 
-      paginationNeeded () {
-        if ( this.vms.length <= 10 ) {
-          return false;
+      paginationNeeded  () {
+        if ( this.table.total <= this.table.perPage ) {
+          return  false;
         }
 
         return true;
@@ -300,6 +308,15 @@
 
       experimentViewer () {
         return [ 'Experiment Viewer' ].includes( this.$store.getters.role );
+      },
+
+      searchVMs(  term ) {
+        if (term === null) {
+          term  = '';
+        }
+
+        this.searchName = term;
+        this.updateExperiment();
       },
 
       bootDecorator ( dnb ) {        
@@ -377,10 +394,12 @@
       },
       
       updateExperiment () {
-        this.$http.get( 'experiments/' + this.$route.params.id + '?show_dnb=true').then(
+        let params = '?show_dnb=true&filter=' + this.searchName
+        this.$http.get( 'experiments/' + this.$route.params.id + params).then(
           response => {
             response.json().then( state => {             
               this.experiment = state;
+              this.table.total  = state.vm_count;  
               this.isWaiting = false;
             });
           }, response => {

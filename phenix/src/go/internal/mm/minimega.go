@@ -107,7 +107,7 @@ func (this Minimega) GetVMInfo(opts ...Option) VMs {
 
 	cmd := mmcli.NewNamespacedCommand(o.ns)
 	cmd.Command = "vm info"
-	cmd.Columns = []string{"host", "name", "state", "uptime", "vlan", "tap", "memory", "vcpus", "disks"}
+	cmd.Columns = []string{"host", "name", "state", "uptime", "vlan", "tap", "memory", "vcpus", "disks","tags"}
 
 	if o.vm != "" {
 		cmd.Filters = []string{"name=" + o.vm}
@@ -139,6 +139,15 @@ func (this Minimega) GetVMInfo(opts ...Option) VMs {
 
 		if s != "" {
 			vm.Taps = strings.Split(s, ", ")
+		}
+
+		s = row["tags"]
+		s = strings.TrimPrefix(s, "{")
+		s = strings.TrimSuffix(s, "}")
+		s = strings.TrimSpace(s)
+
+		if s != "" {
+			vm.Tags = strings.Split(s, ",")
 		}
 
 		//Make sure the vm name is set prior to

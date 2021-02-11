@@ -226,6 +226,7 @@ func GetExperiment(w http.ResponseWriter, r *http.Request) {
         pageNum = query.Get("pageNum")
         perPage = query.Get("perPage")
         showDNB = query.Get("show_dnb") != ""
+        clientFilter  = query.Get("filter")
     )
 
     if !role.Allowed("experiments", "get", name) {
@@ -251,9 +252,18 @@ func GetExperiment(w http.ResponseWriter, r *http.Request) {
     status := isExperimentLocked(name)
     allowed := mm.VMs{}
 
+    filterTree := mm.BuildTree(clientFilter)
+
     for _, vm := range vms {
         if vm.DoNotBoot && !showDNB {
             continue
+        }
+
+        if filterTree != nil {
+            if !filterTree.Evaluate(&vm) {
+                continue
+            }
+
         }
 
         if role.Allowed("vms", "list", fmt.Sprintf("%s_%s", name, vm.Name)) {

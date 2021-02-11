@@ -215,6 +215,7 @@ type VM struct {
 	Uptime      float64   `json:"uptime"`
 	Screenshot  string    `json:"screenshot,omitempty"`
 	State  		string    `json:"state"`
+	Tags  		[]string  `json:"tags"`
 
 	// Used internally to track network <--> IP relationship, since
 	// network ordering from minimega may not be the same as network

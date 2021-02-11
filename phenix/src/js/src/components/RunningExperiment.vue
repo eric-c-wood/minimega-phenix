@@ -903,7 +903,7 @@
                  //     message: 'PROGRESS',
                  //     duration: 200
                  //   });
-                let percent = ( msg.result.percent * 100 ).toFixed( 0 );
+                let percent = Math.round( msg.result.percent * 100 );
 
                 for ( let i = 0; i < vms.length; i++ ) {
                   if  ( vms[i].name == vm[ 1 ] ) {
@@ -988,7 +988,7 @@
                  //     message: 'PROGRESS',
                  //     duration: 200
                  //   });
-                let percent = ( msg.result.percent * 100 ).toFixed( 0 );
+                let percent = Math.round(msg.result.percent * 100 );
 
                 for ( let i = 0; i < vms.length; i++ ) {
                   if  ( vms[i].name == vm[ 1 ] ) {
@@ -1132,7 +1132,7 @@
               }
 
               case  'progress': {
-                let percent = ( msg.result.percent * 100 ).toFixed( 0 );
+                let percent = Math.round( msg.result.percent * 100 );
 
                 for ( let i = 0; i < vms.length; i++ ) {
                   if  ( vms[i].name == vm[ 1 ] ) {

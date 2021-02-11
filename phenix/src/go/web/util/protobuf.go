@@ -99,6 +99,7 @@ func VMToProtobuf(exp string, vm mm.VM) *proto.VM {
 		Busy: 		 vm.Busy,
 		Experiment:  exp,
 		State:		 vm.State,
+		Tags:		 vm.Tags,
 	}
 }
 

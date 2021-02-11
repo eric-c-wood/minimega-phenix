@@ -4,8 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"net/http"
-	"regexp"
+	"net/http"	
 	"sync"
 	"time"
 
@@ -123,15 +122,6 @@ func (this *Client) read() {
 		
 		switch req.Resource.Type {
 		case "experiment/vms":
-		case "experiment/vms/screenshots":
-			switch req.Resource.Action {
-				case "cancel":					
-					this.Lock()
-					this.vms = nil
-					this.Unlock()
-					continue				
-			}
-		
 		default:
 			log.Error("unexpected WebSocket request resource type: %s", req.Resource.Type)
 			continue
@@ -171,7 +161,8 @@ func (this *Client) read() {
 		// If `filter` was not provided client-side, `regex` will be an
 		// empty string and the call to `regexp.MatchString` below will
 		// always be true.
-		regex, _ := payload["filter"].(string)
+		clientFilter, _ := payload["filter"].(string)
+		filterTree := mm.BuildTree(clientFilter)
 
 		// If `show_dnb` was not provided client-side, `showDNB` will be false,
 		// which is the default we want.
@@ -186,9 +177,11 @@ func (this *Client) read() {
 				continue
 			}
 
-			// If there's an error, `matched` will be false.
-			if matched, _ := regexp.MatchString(regex, vm.Name); !matched {
-				continue
+			if filterTree != nil {
+				if !filterTree.Evaluate(&vm) {
+					continue
+				}
+
 			}
 
 			if this.role.Allowed("vms", "list", fmt.Sprintf("%s_%s", expName, vm.Name)) {
