@@ -405,8 +405,7 @@
             icon="search"
             :data="filteredData"
             @input="searchVMs"
-            @select="option => searchVMs(option)">
-            <template slot="empty">No results found</template>
+            @select="option => searchVMs(option)">            
           </b-autocomplete>
           <p  class='control'>
             <button class='button' style="color:#686868" @click="searchVMs('')">
@@ -432,7 +431,7 @@
             :per-page="table.perPage"
             @page-change="onPageChange"
             :pagination-simple="table.isPaginationSimple"
-            :pagination-size="table.paginationSize"
+            :pagination-size="table.paginationSize"            
             backend-sorting
             default-sort-direction="asc"
             default-sort="name"
@@ -447,7 +446,7 @@
             </template>
             <template slot-scope="props">
                <b-table-column  field="multiselect" label="">              
-                 <template v-slot:header="{ column }">
+                 <template v-slot:header>
                    <b-tooltip label="Select/Unselect All" type="is-dark">
                    <input type="checkbox" @click="selectAllVMs" v-model="checkAll" ref="checkAll">  
                    </b-tooltip>
@@ -522,7 +521,26 @@
               <b-table-column field="host"  label="Host" width="150" sortable>
                 {{ props.row.host }}
               </b-table-column>   
-              <b-table-column field="ipv4"  label="IPv4" width="150">
+              <b-table-column label="IPv4" width="150"> 
+                <template v-slot:header= "{ column }"> 
+                  <div class="level">  
+                    <div class="level-item"> 
+                      {{ column.label }}             
+                      &nbsp;       
+                      <b-tooltip label="Start Subnet Packet Capture" type="is-dark" :active="isSubnetPresent()"> 
+                        <button :disabled="!isSubnetPresent()" class="button is-light is-small" @click="captureSubnet()" style="width: .1em;">                  
+                        <b-icon icon="play-circle" ></b-icon>  	
+                        </button>  
+                      </b-tooltip>  
+                      &nbsp;&nbsp;   
+                      <b-tooltip label="Stop Subnet Packet Capture" type="is-dark" :active="isSubnetPresent()">             
+                      <button  :disabled="!(isSubnetPresent() || capturesSearched())" class="button is-light is-small" @click="stopCaptureSubnet()" style="width: .1em;">  
+                        <b-icon icon="stop-circle" ></b-icon>  	  	
+                    </button> 
+                    </b-tooltip>                   
+                  </div>  
+                  </div>
+                  </template>
                <template  v-if="experimentUser() && props.row.running && !props.row.busy"> 
                 <b-tooltip :label="updateCaptureLabel(props.row)" type="is-dark">
                 <div class="field">
@@ -537,8 +555,8 @@
                </template>
                <template  v-else>
                   {{  props.row.ipv4 | stringify | lowercase }}
-               </template>
-              </b-table-column>
+               </template>               
+              </b-table-column>  
               <b-table-column field="network" label="Network">
                 <template v-if="experimentUser() && props.row.running && !props.row.busy">                  
                   <b-tooltip  label="change vlan(s)" type="is-dark">
@@ -2294,7 +2312,169 @@
         this.vlanModal.active = false;
       },
 
-      
+      captureSubnet() {
+
+          let subnets = this.extractAllSubnets(this.search.filter)
+
+          if (subnets == null){
+            return
+          }
+
+          if (subnets.length > 1) {
+            this.$buefy.dialog.alert({
+              title: 'Multiple Subnets Detected',
+              message: 'Subnet packet captures can be started for only one subnet',
+              type:'is-dark',
+              confirmText: 'Ok'
+              }) 
+            return
+          }
+
+          let vms = this.vmSelectedArray
+          //Determine the list of VMs to apply the capture request to
+          if (vms.length == 0){
+            vms = []
+            let visibleItems = this.$refs["vmTable"].visibleData
+            
+            for(let i = 0; i<visibleItems.length;i++){
+              vms.push(visibleItems[i].name)
+
+            }
+
+          }
+
+          if (vms.length == 0){
+            return
+          }
+
+          let url = 'experiments/' + this.$route.params.id + '/captureSubnet';
+          let body = { "subnet": subnets[0], "vms":vms };
+
+          
+
+          this.$http.post(url,body).then(
+            response  => {
+              let vmMap = {}
+              for(let i = 0;i<response.body.captures.length;i++)
+              {
+                  if(vmMap[response.body.captures[i].vm] === undefined){
+                    vmMap[response.body.captures[i].vm] = []
+                    vmMap[response.body.captures[i].vm].push(response.body.captures[i])
+                  }
+                  else { 
+                      vmMap[response.body.captures[i].vm].push(response.body.captures[i])
+                  }
+
+              }
+            
+            let vms = this.experiment.vms;
+            for ( let i = 0; i < vms.length; i++ ) {
+              if  ( vmMap[vms[i].name] !== undefined ) {
+                vms[i].captures = vmMap[vms[i].name]
+                
+              }
+            } 
+            this.experiment.vms = [ ...vms ];
+            this.isWaiting = false;
+                
+          
+            },  response => {
+              this.$buefy.toast.open({
+                message: 'Unable to start capturing subnet ' + subnets[0] + ' ' + response.status + ' status.',
+                type: 'is-danger',
+                duration: 4000
+              });
+              this.isWaiting = false;
+            } 
+          );
+      },
+
+      stopCaptureSubnet() {
+
+          let subnets = this.extractAllSubnets(this.search.filter)
+
+          if (subnets == null){
+            if (!this.capturesSearched()){
+              return
+            }
+            subnets = [];
+            
+          }
+
+          if (subnets.length > 1) {
+            this.$buefy.dialog.alert({
+              title: 'Multiple Subnets Detected',
+              message: 'Subnet packet captures can only be stopped for only one subnet',
+              type:'is-dark',
+              confirmText: 'Ok'
+              }) 
+            return
+          }
+
+          let vms = this.vmSelectedArray
+          //Determine the list of VMs to apply the capture request to
+          if (vms.length == 0){
+            vms = []
+            let visibleItems = this.$refs["vmTable"].visibleData
+            
+            for(let i = 0; i<visibleItems.length;i++){
+              vms.push(visibleItems[i].name)
+
+            }
+
+          }
+
+          if (vms.length == 0){
+            return
+          }
+
+          this.$buefy.dialog.confirm({
+            title:"Stop Subnet Packet Captures",
+            message:"This will stop all packet captures for " + vms.join(", "),
+            cancelText:"Cancel",
+            confirmText:"Ok",
+            type:"is-danger",
+            onConfirm: () => {
+          
+              let url = 'experiments/' + this.$route.params.id + '/stopCaptureSubnet';
+              let body = {"subnet":subnets.length > 0 ? subnets[0] : "", "vms":vms };                  
+
+              this.$http.post(url,body).then(
+                response  => {
+                  window.console.log(response)
+                  let vmMap = {}
+                  for(let i = 0;i<response.body.vms.length;i++)
+                  {
+                      if(vmMap[response.body.vms[i]] === undefined){
+                        vmMap[response.body.vms[i]] = true
+                        
+                      } 
+                  }
+                
+                let vms = this.experiment.vms;
+                for ( let i = 0; i < vms.length; i++ ) {
+                  if  ( vmMap[vms[i].name] !== undefined ) {
+                    vms[i].captures = []
+                    
+                  }
+                } 
+                this.experiment.vms = [ ...vms ];
+                this.isWaiting = false;
+                    
+              
+                },  response => {
+                  this.$buefy.toast.open({
+                    message: 'Unable to stop subnet capture for ' + subnets[0] + ' ' + response.status + ' status.',
+                    type: 'is-danger',
+                    duration: 4000
+                  });
+                  this.isWaiting = false;
+                } 
+              );
+            }
+          })
+      },
+
       resetExpModal ()  {        
         this.expModal = {
           active: false,
@@ -2446,7 +2626,21 @@
             type:'is-dark',
             confirmText: 'Ok'
           }) 
+      },
+
+      isSubnetPresent()  { 
+        return /(?:\d{1,3}[.]){3}\d{1,3}[/]\d{1,2}/.test(this.search.filter)
+
+      },
+      extractAllSubnets(searchTerm){
+        return searchTerm.match(/(?:\d{1,3}[.]){3}\d{1,3}[/]\d{1,2}/g)
+      },
+
+      capturesSearched(){
+        let tmp = this.search.filter.toLowerCase()      
+        return tmp.indexOf("capturing") != -1 && tmp.indexOf("not capturing") == -1
       }
+      
     },
     
     data () {
@@ -2508,7 +2702,7 @@
         vlan: null,
         expName: null,
         isWaiting: true,
-        showModifyStateBar:false,
+        showModifyStateBar:false,        
         checkAll:false,
         vmSelectedArray: [],
         vmActions: { 

@@ -5,7 +5,7 @@ import (
 	"os"
 	"strconv"
 	"path/filepath"
-
+	
 	"phenix/api/vm"
 	"phenix/util"
 	"phenix/util/printer"
@@ -428,7 +428,7 @@ func newVMNetCmd() *cobra.Command {
 func newVMCaptureCmd() *cobra.Command {
 	desc := `Modify network packet captures for a VM
 	
-  Used to modify the network packet captures for a virtual machine in a running 
+  Used to modify the network packet captures for a virtual machine in a running
   experiment; see command help for start and stop for additional arguments.`
 
 	cmd := &cobra.Command{
@@ -469,10 +469,11 @@ func newVMCaptureCmd() *cobra.Command {
 			return nil
 		},
 	}
-
+	
+	
 	stop := &cobra.Command{
-		Use:   "stop <experiment name> <vm name>",
-		Short: "Stop all packet captures",
+		Use:   "vm <experiment name> <vm name>",
+		Short: "Stop all packet captures for the specified vm",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 2 {
 				return fmt.Errorf("Must provide an experiment and VM name")
@@ -494,6 +495,8 @@ func newVMCaptureCmd() *cobra.Command {
 		},
 	}
 
+	
+	
 	cmd.AddCommand(start)
 	cmd.AddCommand(stop)
 

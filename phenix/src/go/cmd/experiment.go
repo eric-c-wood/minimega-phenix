@@ -6,9 +6,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"regexp"
 
 	"phenix/api/config"
 	"phenix/api/experiment"
+	"phenix/api/vm"
 	"phenix/app"
 	"phenix/scheduler"
 	"phenix/types"
@@ -471,6 +473,131 @@ func newExperimentRestartCmd() *cobra.Command {
 	return cmd
 }
 
+func newExperimentCaptureCmd() *cobra.Command {
+	desc := `Modify network packet captures for an experiment
+	
+  Used to modify the network packet captures for an experiment;
+   see command help for start and stop for additional arguments.`
+
+	cmd := &cobra.Command{
+		Use:   "capture",
+		Short: "Modify network packet captures for an experiment",
+		Long:  desc,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return cmd.Help()
+		},
+	}
+
+	stop := &cobra.Command{
+		Use:   "stop",
+		Short: "Stop packet captures for an experiment",
+		Long:  desc,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return cmd.Help()
+		},
+	}
+	
+	stopSubnet := &cobra.Command{
+		Use:   "subnet <experiment name> <subnet>",
+		Short: "Stop all packet captures for the specified subnet",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) != 2 {
+				return fmt.Errorf("Must provide an experiment and subnet")
+			}
+
+			var (
+				expName = args[0]
+				subnet  = args[1]
+			)
+
+			ipv4Re := regexp.MustCompile(`(?:\d{1,3}[.]){3}\d{1,3}(?:\/\d{1,2})?`)
+
+			if !ipv4Re.MatchString(subnet) {
+				return fmt.Errorf("An invalid subnet was detected: %v",subnet)
+			}
+
+			if _,err := vm.StopCaptureSubnet(expName, subnet,[]string{}); err != nil {
+				err := util.HumanizeError(err, "Unable to stop the packet capture(s) on the "+subnet+" ")
+				return err.Humanized()
+			}
+
+			
+			fmt.Printf("The packet capture(s) for the subnet %s were stopped\n",subnet)
+
+			return nil
+		},
+	}
+
+	stopAll := &cobra.Command{
+		Use:   "all <experiment name>",
+		Short: "Stop all packet captures for the specified subnet",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) != 1 {
+				return fmt.Errorf("Must provide an experiment")
+			}
+
+			var (
+				expName = args[0]
+				
+			)
+
+			if _,err := vm.StopCaptureSubnet(expName, "",[]string{}); err != nil {
+				err := util.HumanizeError(err, "Unable to stop the packet capture(s) for "+expName+" ")
+				return err.Humanized()
+			}
+
+			
+			fmt.Printf("All packet captures for experiment %s were stopped",expName)
+
+			return nil
+		},
+	}
+
+	subnetStart := &cobra.Command{
+		Use:   "subnet <experiment name> <subnet>",
+		Short: "Start all packet captures for the specified subnet",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) != 2 {
+				return fmt.Errorf("Must provide an experiment and subnet")
+			}
+
+			var (
+				expName = args[0]
+				subnet  = args[1]				
+			)
+
+			ipv4Re := regexp.MustCompile(`(?:\d{1,3}[.]){3}\d{1,3}(?:\/\d{1,2})?`)
+
+			if !ipv4Re.MatchString(subnet) {
+				return fmt.Errorf("An invalid subnet was detected: %v",subnet)
+			}
+
+			vms,err := vm.CaptureSubnet(expName, subnet,[]string{})
+
+			if err != nil {
+				err := util.HumanizeError(err, "Unable to start the packet capture(s) for "+subnet+" ")
+				return err.Humanized()
+			}
+
+			fmt.Printf("The packet capture(s) for subnet %s were started\n\n",subnet)
+
+			printer.PrintTableOfSubnetCaptures(os.Stdout, vms)
+
+			
+
+			return nil
+		},
+	}
+
+	stop.AddCommand(stopSubnet)
+	stop.AddCommand(stopAll)	
+	cmd.AddCommand(subnetStart)
+	cmd.AddCommand(stop)	
+
+	return cmd
+}
+
+
 func init() {
 	experimentCmd := newExperimentCmd()
 
@@ -483,6 +610,7 @@ func init() {
 	experimentCmd.AddCommand(newExperimentStartCmd())
 	experimentCmd.AddCommand(newExperimentStopCmd())
 	experimentCmd.AddCommand(newExperimentRestartCmd())
+	experimentCmd.AddCommand(newExperimentCaptureCmd())
 
 	rootCmd.AddCommand(experimentCmd)
 }

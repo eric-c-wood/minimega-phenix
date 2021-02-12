@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"net"
 
 	"phenix/api/experiment"
 	"phenix/internal/common"
@@ -1169,4 +1170,202 @@ func MemorySnapshot(expName, vmName, out string, cb func(string)) (string, error
 	return out, nil
 
 }
+
+func CaptureSubnet(expName, subnet string,vmList []string) ([]mm.Capture,error) {
+
+	vms,err := List(expName)
+	
+	if err != nil {
+		return nil,fmt.Errorf("Getting vm list for %s failed",expName)
+	}
+
+	_,refNet,err := net.ParseCIDR(subnet)
+
+	if err != nil {
+		return nil,fmt.Errorf("Unable to parse %s",subnet)
+	}
+
+	var vmTable map[string]bool
+	var matchedVMs []string
+
+	// The web GUI can provide a list of VMs
+	// to search through
+	if len(vmList) > 0 {
+		// Put vms in a table for quick lookup
+		vmTable = make(map[string]bool)
+	
+		for _,vmName := range vmList {
+		
+		if _,ok := vmTable[vmName]; !ok {
+			vmTable[vmName] = true
+			}
+		}
+	}
+
+	// Find the interfaces that are in the
+	// specified subnet
+	for _,vm := range vms {
+
+		// Make sure the VM is running
+		state, err := mm.GetVMState(mm.NS(expName), mm.VMName(vm.Name))
+
+		if err != nil {
+			continue
+		}
+
+		if state != "RUNNING" {
+			continue
+		}
+
+		// Skip vms not in the list
+		if vmTable != nil {
+			if _,ok := vmTable[vm.Name]; !ok {				
+				continue
+			}
+		}
+
+		for iface,network := range vm.IPv4 {
+			address := net.ParseIP(network)
+
+			if address == nil {				
+				continue
+			}
+
+			if refNet.Contains(address) {
+				refTime := time.Now()
+				timeStamp := fmt.Sprintf("%d-%02d-%02d_%02d%02d",refTime.Year(),refTime.Month(),
+											refTime.Day(),refTime.Hour(),refTime.Minute()) 
+
+				filename := fmt.Sprintf("%s_%d_%s.pcap",vm.Name,iface,timeStamp)				
+				if StartCapture(expName, vm.Name, iface, filename) == nil {
+					matchedVMs = append(matchedVMs,vm.Name)
+				}
+				
+			}
+
+		}
+
+	}
+
+	// Get the list of captures 
+	var allVMCaptures []mm.Capture
+	for _,vmName := range matchedVMs {
+
+		vmCaptures := mm.GetVMCaptures(mm.NS(expName),mm.VMName(vmName))
+
+		for _,capture := range vmCaptures {
+			allVMCaptures = append(allVMCaptures,capture)
+
+		}
+		
+	}
+
+	
+	return allVMCaptures,nil
+
+}
+
+func StopCaptureSubnet(expName, subnet string,vmList []string) ([]string,error) {
+
+	vms,err := List(expName)
+	
+	if err != nil {
+		return nil,fmt.Errorf("Getting vm list for %s failed",expName)
+	}
+
+	
+	_,refNet,err := net.ParseCIDR(subnet)
+
+	if err != nil {
+		refNet = nil
+	}
+
+	
+
+	var vmTable map[string]bool
+	var matchedVMs []string
+
+	// The web GUI can provide a list of VMs
+	// to search through
+	if len(vmList) > 0 {
+		// Put vms in a table for quick lookup
+		vmTable = make(map[string]bool)
+	
+		for _,vmName := range vmList {
+		
+		if _,ok := vmTable[vmName]; !ok {
+			vmTable[vmName] = true
+			}
+		}
+	}
+
+	// Find the interfaces that are in the
+	// specified subnet
+	for _,vm := range vms {
+
+		// Skip vms with no current captures
+		if len(vm.Captures) == 0 {
+			continue
+		}
+
+		// Make sure the VM is running
+		state, err := mm.GetVMState(mm.NS(expName), mm.VMName(vm.Name))
+
+		if err != nil {
+			continue
+		}
+
+		if state != "RUNNING" {
+			continue
+		}
+
+		// Skip vms not in the list
+		if vmTable != nil {
+			if _,ok := vmTable[vm.Name]; !ok {				
+				continue
+			}
+		}
+
+		if len(subnet) == 0 {
+			if StopCaptures(expName, vm.Name) == nil {
+				matchedVMs = append(matchedVMs,vm.Name)				
+			}
+			continue
+		}
+
+		if refNet == nil {
+			continue
+		}
+
+		for _,network := range vm.IPv4 {
+			address := net.ParseIP(network)
+
+			if address == nil {				
+				continue
+			}
+
+			if refNet.Contains(address) {
+
+				if StopCaptures(expName, vm.Name) == nil {
+					matchedVMs = append(matchedVMs,vm.Name)
+
+					// Avoid trying to stop captures for
+					// the same vm
+					break
+				}
+				
+			}
+
+		}
+
+	}
+
+	
+
+	
+	return matchedVMs,nil
+
+}
+
+
 

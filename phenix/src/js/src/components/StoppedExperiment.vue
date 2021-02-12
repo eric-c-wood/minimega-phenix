@@ -43,8 +43,7 @@
         icon="search"
         :data="filteredData"
         @input="searchVMs"
-        @select="option => filtered = option">
-          <template slot="empty">No results found</template>
+        @select="option => filtered = option">          
       </b-autocomplete>
       <p class='control'>
         <button class='button' style="color:#686868" @click="searchName = ''">

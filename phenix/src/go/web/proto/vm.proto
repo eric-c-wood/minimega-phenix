@@ -27,6 +27,10 @@ message VMList {
   uint32 total = 2;
 }
 
+message VMNameList {
+  repeated string vms = 1;
+}
+
 message Capture {
   string vm = 1;
   uint32 interface = 2;

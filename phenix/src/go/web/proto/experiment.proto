@@ -96,6 +96,11 @@ message StartCaptureRequest {
   string filename = 2;
 }
 
+message CaptureSubnetRequest {
+  string subnet = 1;
+  repeated string vms = 2;
+}
+
 message UpdateScheduleRequest {
 	string algorithm = 1;
 }
