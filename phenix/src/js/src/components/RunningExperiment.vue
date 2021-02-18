@@ -2347,46 +2347,56 @@
             return
           }
 
-          let url = 'experiments/' + this.$route.params.id + '/captureSubnet';
-          let body = { "subnet": subnets[0], "vms":vms };
+          this.$buefy.dialog.confirm({
+            title:"Start Subnet Packet Captures",
+            message:"This will start all packet captures for " + vms.join(", "),
+            cancelText:"Cancel",
+            confirmText:"Ok",
+            type:"is-success",
+            onConfirm: () => {
 
-          
+              let url = 'experiments/' + this.$route.params.id + '/captureSubnet';
+              let body = { "subnet": subnets[0], "vms":vms };
 
-          this.$http.post(url,body).then(
-            response  => {
-              let vmMap = {}
-              for(let i = 0;i<response.body.captures.length;i++)
-              {
-                  if(vmMap[response.body.captures[i].vm] === undefined){
-                    vmMap[response.body.captures[i].vm] = []
-                    vmMap[response.body.captures[i].vm].push(response.body.captures[i])
+              
+
+              this.$http.post(url,body).then(
+                response  => {
+                  let vmMap = {}
+                  for(let i = 0;i<response.body.captures.length;i++)
+                  {
+                      if(vmMap[response.body.captures[i].vm] === undefined){
+                        vmMap[response.body.captures[i].vm] = []
+                        vmMap[response.body.captures[i].vm].push(response.body.captures[i])
+                      }
+                      else { 
+                          vmMap[response.body.captures[i].vm].push(response.body.captures[i])
+                      }
+
                   }
-                  else { 
-                      vmMap[response.body.captures[i].vm].push(response.body.captures[i])
+                
+                let vms = this.experiment.vms;
+                for ( let i = 0; i < vms.length; i++ ) {
+                  if  ( vmMap[vms[i].name] !== undefined ) {
+                    vms[i].captures = vmMap[vms[i].name]
+                    
                   }
-
-              }
-            
-            let vms = this.experiment.vms;
-            for ( let i = 0; i < vms.length; i++ ) {
-              if  ( vmMap[vms[i].name] !== undefined ) {
-                vms[i].captures = vmMap[vms[i].name]
-                
-              }
-            } 
-            this.experiment.vms = [ ...vms ];
-            this.isWaiting = false;
-                
-          
-            },  response => {
-              this.$buefy.toast.open({
-                message: 'Unable to start capturing subnet ' + subnets[0] + ' ' + response.status + ' status.',
-                type: 'is-danger',
-                duration: 4000
-              });
-              this.isWaiting = false;
-            } 
-          );
+                } 
+                this.experiment.vms = [ ...vms ];
+                this.isWaiting = false;
+                    
+              
+                },  response => {
+                  this.$buefy.toast.open({
+                    message: 'Unable to start capturing subnet ' + subnets[0] + ' ' + response.status + ' status.',
+                    type: 'is-danger',
+                    duration: 4000
+                  });
+                  this.isWaiting = false;
+                } 
+            );
+          }
+        })
       },
 
       stopCaptureSubnet() {

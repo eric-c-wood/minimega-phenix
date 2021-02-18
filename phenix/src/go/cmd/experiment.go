@@ -500,7 +500,7 @@ func newExperimentCaptureCmd() *cobra.Command {
 	stopSubnet := &cobra.Command{
 		Use:   "subnet <experiment name> <subnet>",
 		Short: "Stop all packet captures for the specified subnet",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, args []string) error {			
 			if len(args) != 2 {
 				return fmt.Errorf("Must provide an experiment and subnet")
 			}
@@ -510,7 +510,7 @@ func newExperimentCaptureCmd() *cobra.Command {
 				subnet  = args[1]
 			)
 
-			ipv4Re := regexp.MustCompile(`(?:\d{1,3}[.]){3}\d{1,3}(?:\/\d{1,2})?`)
+			ipv4Re := regexp.MustCompile(`(?:\d{1,3}[.]){3}\d{1,3}(?:\/\d{1,2})`)
 
 			if !ipv4Re.MatchString(subnet) {
 				return fmt.Errorf("An invalid subnet was detected: %v",subnet)
@@ -530,7 +530,7 @@ func newExperimentCaptureCmd() *cobra.Command {
 
 	stopAll := &cobra.Command{
 		Use:   "all <experiment name>",
-		Short: "Stop all packet captures for the specified subnet",
+		Short: "Stop all packet captures for the specified experiment",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return fmt.Errorf("Must provide an experiment")
@@ -547,7 +547,7 @@ func newExperimentCaptureCmd() *cobra.Command {
 			}
 
 			
-			fmt.Printf("All packet captures for experiment %s were stopped",expName)
+			fmt.Printf("All packet captures for experiment %s were stopped\n",expName)
 
 			return nil
 		},
@@ -566,7 +566,7 @@ func newExperimentCaptureCmd() *cobra.Command {
 				subnet  = args[1]				
 			)
 
-			ipv4Re := regexp.MustCompile(`(?:\d{1,3}[.]){3}\d{1,3}(?:\/\d{1,2})?`)
+			ipv4Re := regexp.MustCompile(`(?:\d{1,3}[.]){3}\d{1,3}(?:\/\d{1,2})`)
 
 			if !ipv4Re.MatchString(subnet) {
 				return fmt.Errorf("An invalid subnet was detected: %v",subnet)
