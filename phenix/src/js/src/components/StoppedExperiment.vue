@@ -80,7 +80,10 @@
             :pagination-simple="table.isPaginationSimple"
             :pagination-size="table.paginationSize"
             :default-sort-direction="table.defaultSortDirection"
-            default-sort="name">
+            :checked-rows.sync="selectedRows"
+            checkable
+            default-sort="name"
+            ref="vmTable">
               <template slot="empty">
                 <section class="section">
                   <div class="content has-text-white has-text-centered">
@@ -185,6 +188,22 @@
                   </template>
                 </b-table-column>
                 <b-table-column v-if="experimentUser()" label="Boot" centered>
+                  <template v-slot:header = "{ column }">                  
+                      {{ column.label }}   
+                      <br> 
+                      <div class="level" style="padding: 0px;">                    
+                      <b-tooltip label="Set to Boot" type="is-dark" :active="visibleItems()"> 
+                        <div v-if="visibleItems()" @click="setBoot(false)">                  
+                          <b-icon icon="bolt" type="is-success" size="is-small"></b-icon>  	
+                        </div>  
+                      </b-tooltip>                        
+                      <b-tooltip label="Set to Do Not Boot" type="is-dark" :active="visibleItems()">             
+                        <div v-if="visibleItems()" @click="setBoot(true)">                  
+                          <b-icon icon="bolt" style="color: #ff0000;" size="is-small"></b-icon>  	
+                        </div>  
+                    </b-tooltip>                   
+                   </div>
+                  </template>
                   <b-tooltip :label="getBootLabel(props.row.name,props.row.dnb)" type="is-dark">
                     <div @click="updateDnb(props.row.name, !props.row.dnb)">
                       <font-awesome-icon :class="bootDecorator(props.row.dnb)" icon="bolt" />
@@ -316,6 +335,7 @@
 
         this.searchName = term;
         this.updateExperiment();
+        
       },
 
       bootDecorator ( dnb ) {        
@@ -469,6 +489,8 @@
       },
       
       updateFiles () {
+        this.files = [];
+        
         this.$http.get( 'experiments/' + this.$route.params.id + '/files' ).then(
           response => {
             response.json().then(
@@ -940,7 +962,106 @@
         return diskName.indexOf('/') === -1 ? diskName : diskName.split('/').slice(-1)[0];       
                  
       },
-      
+
+      visibleItems() {
+        return this.$refs["vmTable"].visibleData.length > 0
+      },
+
+      setBoot(dnb){
+        let vms = []
+        let successMessage = "";
+        let failedMessage = "";
+
+        //Determine the list of VMs to apply the boot request to
+        if (this.selectedRows.length == 0){
+            
+            let visibleItems = this.$refs["vmTable"].visibleData
+            
+            for(let i = 0; i<visibleItems.length;i++){
+              vms.push(visibleItems[i].name)
+
+            }
+
+        }
+        else{
+          for(let i = 0; i<this.selectedRows.length;i++){
+              vms.push(this.selectedRows[i].name)
+
+            }
+        }
+
+        if (vms.length == 0){
+            return
+        }
+
+        if (dnb){
+          successMessage = " to not boot when the experiment starts";
+          failedMessage = ' VM to not boot when experiment starts failed with '
+        }
+        else {
+          successMessage = " to boot when the experiment starts";
+          failedMessage = ' VM to boot when experiment starts failed with ' 
+        }
+
+        this.$buefy.dialog.confirm({
+            title:"Set Boot",
+            message:"This will set " + vms.join(", ") + successMessage ,
+            cancelText:"Cancel",
+            confirmText:"Ok",
+            type:"is-success",
+            onConfirm: () => {
+              
+              let update = { "dnb": dnb };
+              
+              vms.forEach((vmName) => {
+                  this.$http.patch(
+                    'experiments/' + this.$route.params.id + '/vms/' + vmName, update
+                    ).then(
+                    response  => {
+                      let vms = this.experiment.vms;                  
+                
+                      for ( let i = 0; i < vms.length; i++ ) {
+                        if ( vms[i].name == response.body.name ) {
+                          vms[i] = response.body;
+                          break;
+                       } 
+                      }   
+              
+                    this.experiment.vms = [ ...vms ];              
+                    this.isWaiting = false;    
+                        
+                  
+                    },  response => {
+                      this.$buefy.toast.open({
+                      message: 'Setting the ' 
+                             + vmName 
+                             + failedMessage
+                             + response.status 
+                             + ' status.',
+                      type: 'is-danger',
+                      duration: 4000
+                    });
+                  
+                  this.isWaiting = false;
+                }
+                )                  
+                this.sleep(200);        
+              }   
+              )
+            }
+          })
+
+          //clear the selection
+          this.selectedRows = [];
+           
+      },
+
+      sleep(msDuration){
+        let endTime = Date.now() + msDuration;
+        while(Date.now() < endTime){
+
+        }
+      }
       
       
     },
@@ -972,7 +1093,8 @@
         filtered: null,
         algorithm: null,
         dnb: false,
-        isWaiting: true
+        isWaiting: true,
+        selectedRows: []
       }
     }
   }

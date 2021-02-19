@@ -448,12 +448,12 @@
                <b-table-column  field="multiselect" label="">              
                  <template v-slot:header>
                    <b-tooltip label="Select/Unselect All" type="is-dark">
-                   <input type="checkbox" @click="selectAllVMs" v-model="checkAll" ref="checkAll">  
+                   <b-checkbox @click.native="selectAllVMs" :v-model="checkAll" type="is-primary"/>
                    </b-tooltip>
                  </template>
                 <template v-if="!props.row.busy">
-                  <div>
-                    <input type="checkbox" :value="props.row.name" v-model="vmSelectedArray" >
+                  <div>                    
+                    <b-checkbox v-model="vmSelectedArray" :native-value=props.row.name type="is-primary"/>               
                   </div>
                 </template>
                 <template v-else>
@@ -2582,7 +2582,7 @@
         this.unSelectAllVMs();
       },
   
-      selectAllVMs  () {            
+      selectAllVMs  () {        
         
         var visibleItems = this.$refs["vmTable"].visibleData
         //If there are no visible items, there is nothing to select
@@ -2610,12 +2610,7 @@
         
       unSelectAllVMs(){
         
-        //directly accessing the checkbox should not 
-        //be needed in order to have the "checked" state
-        //update correctly.  Tried v-model.lazy to update on
-        //change events but still did not work.  Will revisit
-        //in the future as time allows
-        this.$refs["checkAll"].checked = false;
+        this.checkAll=false;        
         this.vmSelectedArray=[]
         this.showModifyStateBar = false;
         
@@ -2649,6 +2644,10 @@
       capturesSearched(){
         let tmp = this.search.filter.toLowerCase()      
         return tmp.indexOf("capturing") != -1 && tmp.indexOf("not capturing") == -1
+      },
+
+      showArray(){
+        window.console.log(this.vmSelectedArray)
       }
       
     },
@@ -2714,7 +2713,7 @@
         isWaiting: true,
         showModifyStateBar:false,        
         checkAll:false,
-        vmSelectedArray: [],
+        vmSelectedArray:[],
         vmActions: { 
           start:  0,
           pause:  1,

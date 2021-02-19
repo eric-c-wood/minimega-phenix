@@ -35,7 +35,7 @@ echo "BUILD PACKAGES (linux)"
 for i in `ls $SCRIPT_DIR/src | grep -v vendor | grep -v plumbing`
 do
 	echo $i
-	/usr/local/go1.11/bin/go install $i
+	go install $i
 	if [[ $? != 0 ]]; then
 		exit 1
 	fi
@@ -43,7 +43,7 @@ done
 for i in `ls $SCRIPT_DIR/src/plumbing`
 do
 	echo $i
-	/usr/local/go1.11/bin/go install plumbing/$i
+	go install plumbing/$i
 	if [[ $? != 0 ]]; then
 		exit 1
 	fi
@@ -54,7 +54,7 @@ echo
 echo "BUILD PACKAGES (windows)"
 for i in "protonuke" "miniccc"; do
     echo $i
-    GOOS=windows /usr/local/go1.11/bin/go build -o $SCRIPT_DIR/bin/$i.exe $i
+    GOOS=windows go build -o $SCRIPT_DIR/bin/$i.exe $i
     if [[ $? != 0 ]]; then
         exit 1
     fi
