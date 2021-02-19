@@ -13,6 +13,7 @@ import (
     "sort"
     "strconv"
     "time"
+    "strings"
 
     "phenix/api/cluster"
     "phenix/api/config"
@@ -21,6 +22,8 @@ import (
     "phenix/api/vm"
     "phenix/app"
     "phenix/internal/mm"
+    "phenix/internal/mm/mmcli"
+    "phenix/internal/common"
     "phenix/types"    
     putil "phenix/util"
     "phenix/web/broker"
@@ -701,7 +704,9 @@ func GetExperimentFiles(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    body, err := marshaler.Marshal(&proto.FileList{Files: files})
+    fileList, err := getFileModDates(name,files)
+
+    body, err := marshaler.Marshal(util.FileListToProtobuf(fileList))
     if err != nil {
         log.Error("marshaling file list for experiment %s - %v", name, err)
         http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -3171,4 +3176,70 @@ func parseInt(v string, d *int) error {
     var err error
     *d, err = strconv.Atoi(v)
     return err
+}
+
+func getFileModDates(expName string,fileList []string) (map[string]string,error) {
+
+    fileDates := make(map[string]string)
+
+	dirPath := fmt.Sprintf("%s/images/%s/files", common.PhenixBase,expName)
+
+	// First get file listings from mesh, then from headnode.
+	commands := []string{
+		"mesh send all shell /usr/bin/ls -alht " + dirPath,
+		"shell /usr/bin/ls -alht " + dirPath,
+    }
+    
+    
+	cmd := mmcli.NewCommand()
+
+	for _, command := range commands {
+        cmd.Command = command
+
+        for response := range mmcli.Run(cmd){
+            for _,r := range response.Resp {
+                if len(r.Response) == 0 {
+                    continue
+                }
+
+                lines := strings.Split(r.Response,"\n")
+
+                for _,line := range lines {
+                    fields := strings.Fields(line)
+                    if len(fields) < 9 {
+                        continue
+                    }
+
+                    directoryFlag := fields[0:1][0][0:1]
+                    if directoryFlag == "d" {
+                        continue
+                    }
+                    
+                    fileModDate := strings.Join(fields[5:8]," ")
+                    fileName := fields[8:9][0]
+
+                    if _,ok := fileDates[fileName]; !ok {                        
+                        fileDates[fileName] = fileModDate
+                    }
+
+                }
+            }
+
+
+        }
+      
+		
+	}
+
+    output := make(map[string]string)
+
+    for _,filename := range fileList {
+
+        if _,ok := fileDates[filename]; ok {
+            output[filename] = fileDates[filename]
+        }
+        
+    }
+
+	return output, nil
 }

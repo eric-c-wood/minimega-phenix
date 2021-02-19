@@ -529,13 +529,13 @@
                       &nbsp;       
                       <b-tooltip label="Start Subnet Packet Capture" type="is-dark" :active="isSubnetPresent()"> 
                         <button :disabled="!isSubnetPresent()" class="button is-light is-small" @click="captureSubnet()" style="width: .1em;">                  
-                        <b-icon icon="play-circle" ></b-icon>  	
+                        <b-icon icon="play-circle"></b-icon>  	
                         </button>  
                       </b-tooltip>  
                       &nbsp;&nbsp;   
                       <b-tooltip label="Stop Subnet Packet Capture" type="is-dark" :active="isSubnetPresent()">             
                       <button  :disabled="!(isSubnetPresent() || capturesSearched())" class="button is-light is-small" @click="stopCaptureSubnet()" style="width: .1em;">  
-                        <b-icon icon="stop-circle" ></b-icon>  	  	
+                        <b-icon icon="stop-circle"></b-icon>  	  	
                     </button> 
                     </b-tooltip>                   
                   </div>  
@@ -607,32 +607,43 @@
           </b-field>
         </b-tab-item>
         <b-tab-item label="Files">
-          <template v-if="files &&  !files.length">
-            <section class="hero is-light is-bold is-large">
-              <div  class="hero-body">
-                <div class="container" style="text-align: center">
-                  <h1 class="title">
-                    There are no files available.
-                  </h1>
-                </div>
-              </div>
-            </section>
-          </template>
-          <template v-else>
-            <ul class="fa-ul" style="list-style:none">
-              <li v-for="(  f, index ) in files" :key="index">
-                <font-awesome-icon class="fa-li" icon="file-download" />
-                <a :href="'/api/v1/experiments/' 
-                  + experiment.name 
-                  + '/files/' 
-                  + f 
-                  + '?token=' 
-                  + $store.state.token" target="_blank">
-                  {{  f }}
-                </a>
-              </li>
-            </ul>
-          </template>
+          <b-table            
+            :data="files"
+            paginated=true
+            per-page=10           
+            pagination-simple=true
+            pagination-size='is-small'                      
+            default-sort="date"
+            ref="filesTable">
+            <template slot="empty">
+                <section class="section">
+                  <div class="content has-text-white has-text-centered">
+                    No Files Are Available!
+                  </div>
+                </section>
+            </template>
+            <template slot-scope="props">
+                <b-table-column field="name" label="File Name" sortable centered>                  
+                          {{ props.row.name }}                      
+                </b-table-column>
+                <b-table-column field="date" label="File Date" sortable centered>                  
+                          {{ props.row.date }}                      
+                </b-table-column>
+                 <b-table-column field="category" label="Category" sortable centered>                  
+                          {{ props.row.category }}                      
+                </b-table-column>
+                <b-table-column field="download" label="Download" centered>   
+                        <a :href="'/api/v1/experiments/'
+                          + experiment.name 
+                          + '/files/' 
+                          + props.row.name
+                          + '?token=' 
+                          + $store.state.token" target="_blank"> 
+                          <b-icon icon="file-download" size="is-small"></b-icon>                       
+                          </a>                      
+                </b-table-column>
+            </template>
+          </b-table> 
         </b-tab-item>
       </b-tabs>
     </div>
@@ -1270,8 +1281,45 @@
           response  => {
             response.json().then(
               state =>  {
+                let fileMap = {}
+                let extension = ""
+                let category = ""
+
                 for ( let i = 0; i < state.files.length; i++ ){
-                  this.files.push(  state.files[i] );
+                  category = ""
+                  if(fileMap[state.files[i].filename] === undefined){
+                    extension = state.files[i].filename.split(".").slice(-1)[0]
+                    switch (extension){
+                      case "pcap":{
+                        category = "Packet Capture"
+                        break;
+                      }
+                      case "elf":{
+                        category = "Memory Snapshot"
+                        break;
+                      }
+                      case "qcow2":{
+                        category = "Backing Image"
+                        break;
+                      }
+                      case "SNAP":{
+                        category = "VM Memory Snapshot"
+                        break;
+                      }
+                      case "qc2":{
+                        category = "VM Disk Snapshot"
+                        break;
+                      }
+                    }
+                    fileMap[state.files[i].filename] = category
+                  
+                  }
+                }
+
+                for ( let i = 0; i < state.files.length; i++ ){
+                  let filename = state.files[i].filename
+                  let fileObj = {"name":filename,"date":state.files[i].date,"category":fileMap[filename]}
+                  this.files.push(fileObj);
                 }
 
                 this.isWaiting = false;

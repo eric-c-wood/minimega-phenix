@@ -173,3 +173,13 @@ func UserToProtobuf(u rbac.User) *proto.User {
 
 	return user
 }
+
+func FileListToProtobuf(experimentFiles map[string]string) *proto.FileList {
+	var protoFiles []*proto.File
+
+	for key, value := range experimentFiles {
+		protoFiles = append(protoFiles, &proto.File{Filename: key, Date: value})
+	}
+
+	return &proto.FileList{Files: protoFiles}
+}
