@@ -42,11 +42,11 @@
         placeholder="Find a VM"
         icon="search"
         :data="filteredData"
-        @input="searchVMs"
-        @select="option => filtered = option">          
+        @typing="searchVMs"
+        @select="option => searchVMs(option)">          
       </b-autocomplete>
       <p class='control'>
-        <button class='button' style="color:#686868" @click="searchName = ''">
+        <button class='button' style="color:#686868" @click="searchVMs('')">
           <b-icon icon="window-close"></b-icon>
         </button>
       </p>
@@ -265,6 +265,7 @@
 </template>
 
 <script>
+
   export default {
     beforeDestroy () {
       this.$options.sockets.onmessage = null;
@@ -338,7 +339,7 @@
         return [ 'Experiment Viewer' ].includes( this.$store.getters.role );
       },
 
-      searchVMs(  term ) {
+      searchVMs: _.debounce(function(  term ) {
         if (term === null) {
           term  = '';
         }
@@ -346,7 +347,7 @@
         this.searchName = term;
         this.updateExperiment();
         
-      },
+      },250),
 
       bootDecorator ( dnb ) {        
         if ( dnb ) {

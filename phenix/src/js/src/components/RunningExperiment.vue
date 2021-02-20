@@ -404,7 +404,7 @@
             placeholder="Find a VM"
             icon="search"
             :data="filteredData"
-            @input="searchVMs"
+            @typing="searchVMs"
             @select="option => searchVMs(option)">            
           </b-autocomplete>
           <p  class='control'>
@@ -652,6 +652,9 @@
 </template>
 
 <script>
+
+  //import debounce from 'lodash/debounce'
+
   export  default {
     async beforeDestroy () {
       this.$options.sockets.onmessage = null;
@@ -699,14 +702,14 @@
         return [ 'Experiment Viewer' ].includes( this.$store.getters.role );        
       },
 
-      searchVMs(  term ) {
+      searchVMs: _.debounce(function ( term ) {
         if (term === null) {
           term  = '';
         }
-
+               
         this.search.filter = term;
         this.updateTable();
-      },
+      },250 ),
 
       switchPagination( enabled ) {
         this.table.isPaginated = enabled;

@@ -1076,11 +1076,7 @@ func MemorySnapshot(expName, vmName, out string, cb func(string)) (string, error
 		out += ".elf"
 	}
 
-	base, err := getBaseImage(expName, vmName)
-	if err != nil {
-		return "", fmt.Errorf("getting base image for VM %s in experiment %s: %w", vmName, expName, err)
-	}
-
+	
 	// Get compute node VM is running on.
 
 	cmd := mmcli.NewNamespacedCommand(expName)
@@ -1094,12 +1090,24 @@ func MemorySnapshot(expName, vmName, out string, cb func(string)) (string, error
 		return "", fmt.Errorf("VM not found")
 	}
 
-	if !filepath.IsAbs(base) {
-		base = common.PhenixBase + "/images/" + base
-	}
+	//Save in the experiment files directory so that the file
+	//appears in the Web GUI's files tab
 	if !filepath.IsAbs(out) {
-		out = common.PhenixBase + "/images/" + out
+		out = fmt.Sprintf("%s/images/%s/files/%s",common.PhenixBase,expName,out)
 	}
+
+	//Make sure that the experiment files directory exists
+	var cmdPrefix string
+	if !mm.IsHeadnode(status[0]["host"]) {
+			cmdPrefix = "mesh send " + status[0]["host"]
+	}
+
+	cmd.Command = fmt.Sprintf("%s shell mkdir -p %s", cmdPrefix, filepath.Dir(out))
+
+	if err := mmcli.ErrorResponse(mmcli.Run(cmd)); err != nil {
+		return fmt.Errorf("ensuring experiment files directory exists: %w", err)
+	}
+
 
 	// ***** BEGIN: MEMORY SNAPSHOT VM *****
 

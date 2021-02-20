@@ -3186,8 +3186,8 @@ func getFileModDates(expName string,fileList []string) (map[string]string,error)
 
 	// First get file listings from mesh, then from headnode.
 	commands := []string{
-		"mesh send all shell /usr/bin/ls -alht " + dirPath,
-		"shell /usr/bin/ls -alht " + dirPath,
+		"mesh send all shell ls -alht " + dirPath,
+		"shell ls -alht " + dirPath,
     }
     
     
