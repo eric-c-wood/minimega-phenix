@@ -1560,20 +1560,17 @@
         name.forEach((arg,) => {
           for ( let i = 0; i < vms.length; i++ ) {
             if ( vms[i].name == arg ){
-        var filename=""; 
-        if ( /(.*)_\d{14}/.test( vms[i].disk ) ) {
-          filename = vms[i].disk.substring( 0, vms[i].disk.indexOf( '_' ) ) + '_MemorySnap_' + date + time;
-        } else {
-          filename = vms[i].disk.substring( 0, vms[i].disk.indexOf( '.' ) ) + '_MemorySnap_' + date + time;
-        }
-                          filename = vms[i].name +"_"+ filename.substring(filename.lastIndexOf( '/')+1 ); 
-                          this.memoryDumpModal.vm.push({
-                            dateTime:date+time+"" ,
-                            name:vms[i].name ,
-                            filename:filename ,
-                            nameErrType:"" ,
-                            nameErrMsg:""
-                          });
+               
+           var filename = date + "_" + time;
+       
+              filename = vms[i].name +"_"+ filename.substring(filename.lastIndexOf( '/')+1 ); 
+              this.memoryDumpModal.vm.push({
+                dateTime:date+time+"" ,
+                name:vms[i].name ,
+                filename:filename ,
+                nameErrType:"" ,
+                nameErrMsg:""
+              });
       }
       }
         })

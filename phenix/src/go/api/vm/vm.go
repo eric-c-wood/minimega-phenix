@@ -1102,19 +1102,16 @@ func MemorySnapshot(expName, vmName, out string, cb func(string)) (string, error
 			cmdPrefix = "mesh send " + status[0]["host"]
 	}
 
-	cmd.Command = fmt.Sprintf("%s shell mkdir -p %s", cmdPrefix, filepath.Dir(out))
+	cmd.Columns = nil
+	cmd.Filters = nil
+	cmd.Command = fmt.Sprintf("%s shell mkdir -p %s", cmdPrefix, filepath.Dir(out))	
 
 	if err := mmcli.ErrorResponse(mmcli.Run(cmd)); err != nil {
-		return fmt.Errorf("ensuring experiment files directory exists: %w", err)
+		return "",fmt.Errorf("ensuring experiment files directory exists: %w", err)
 	}
-
-
 	// ***** BEGIN: MEMORY SNAPSHOT VM *****
 
 	// Get minimega's memory snapshot path for VM
-
-	cmd.Columns = nil
-	cmd.Filters = nil
 
 	qmp := fmt.Sprintf(`{ "execute": "dump-guest-memory", "arguments": { "protocol": "file:%s", "paging": false, "format": "elf" , "detach": true} }`, out)
 	cmd.Command = fmt.Sprintf("vm qmp %s '%s'", vmName, qmp)

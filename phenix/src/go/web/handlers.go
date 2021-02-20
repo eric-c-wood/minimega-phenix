@@ -5,6 +5,7 @@ import (
     "bytes"
     "encoding/base64"
     "encoding/json"
+    "errors"
     "fmt"
     "io"
     "io/ioutil"
@@ -35,8 +36,7 @@ import (
     log "github.com/activeshadow/libminimega/minilog"
     "github.com/dgrijalva/jwt-go"
     assetfs "github.com/elazarl/go-bindata-assetfs"
-    "github.com/gorilla/mux"
-    "github.com/pkg/errors"
+    "github.com/gorilla/mux"    
     "golang.org/x/net/websocket"
     "golang.org/x/sync/errgroup"
     "google.golang.org/protobuf/encoding/protojson"
@@ -736,6 +736,13 @@ func GetExperimentFile(w http.ResponseWriter, r *http.Request) {
 
     contents, err := experiment.File(name, file)
     if err != nil {
+
+        if errors.Is(err, mm.ErrCaptureExists) {
+			http.Error(w, "capture still in progress", http.StatusBadRequest)
+			return
+		}
+
+
         log.Error("getting file %s for experiment %s - %v", file, name, err)
         http.Error(w, err.Error(), http.StatusInternalServerError)
         return
@@ -1605,7 +1612,7 @@ func StartVMCapture(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    if err := mm.StartVMCapture(mm.NS(exp), mm.VMName(name), mm.CaptureInterface(int(req.Interface)), mm.CaptureFile(req.Filename)); err != nil {
+    if err := vm.StartCapture(exp, name, int(req.Interface), req.Filename); err != nil {
         log.Error("starting VM capture for VM %s in experiment %s - %v", name, exp, err)
         http.Error(w, err.Error(), http.StatusInternalServerError)
         return
@@ -1638,8 +1645,7 @@ func StopVMCaptures(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    err := mm.StopVMCapture(mm.NS(exp), mm.VMName(name))
-    if err != nil && err != mm.ErrNoCaptures {
+    if err := vm.StopCaptures(exp, name); err != nil {
         log.Error("stopping VM capture for VM %s in experiment %s - %v", name, exp, err)
         http.Error(w, err.Error(), http.StatusInternalServerError)
         return
@@ -2676,7 +2682,7 @@ func GetLogs(w http.ResponseWriter, r *http.Request) {
             }
 
             if err := scanner.Err(); err != nil {
-                return errors.WithMessagef(err, "scanning %s log file at %s", name, path)
+                return fmt.Errorf("scanning %s log file at %s: %w", name, path, err)
             }
 
             return nil

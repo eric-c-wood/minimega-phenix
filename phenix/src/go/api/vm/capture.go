@@ -2,11 +2,9 @@ package vm
 
 import (
 	"errors"
-	"fmt"
-	"os"
+	"fmt"	
 	"path/filepath"
-
-	"phenix/api/experiment"
+	
 	"phenix/internal/mm"
 )
 
@@ -47,19 +45,13 @@ func StartCapture(expName, vmName string, iface int, out string) error {
 
 	if vm.Networks[iface] == "disconnected" {
 		return fmt.Errorf("cannot capture on a disconnected interface")
-	}
-
-	captures := mm.GetVMCaptures(mm.NS(expName), mm.VMName(vmName))
-
-	for _, capture := range captures {
-		if capture.Interface == iface {
-			return fmt.Errorf("packet capture already running for interface %d on VM %s in experiment %s", iface, vmName, expName)
-		}
-	}
+	}	
 
 	if ext := filepath.Ext(out); ext != ".pcap" {
 		out = out + ".pcap"
 	}
+
+	out = fmt.Sprintf("%s/files/%s", expName, filepath.Base(out))
 
 	if err := mm.StartVMCapture(mm.NS(expName), mm.VMName(vmName), mm.CaptureInterface(iface), mm.CaptureFile(out)); err != nil {
 		return fmt.Errorf("starting VM capture for interface %d on VM %s in experiment %s: %w", iface, vmName, expName, err)
@@ -82,36 +74,11 @@ func StopCaptures(expName, vmName string) error {
 
 	if vmName == "" {
 		return fmt.Errorf("no VM name provided")
-	}
-
-	captures := mm.GetVMCaptures(mm.NS(expName), mm.VMName(vmName))
-
-	if captures == nil {
-		return fmt.Errorf("VM %s in experiment %s: %w", vmName, expName, ErrNoCaptures)
-	}
-
-	exp, err := experiment.Get(expName)
-	if err != nil {
-		return fmt.Errorf("getting experiment %s: %w", expName, err)
-	}
-
-	dir := fmt.Sprintf("%s/captures", exp.Spec.BaseDir)
-
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return fmt.Errorf("creating files directory for experiment %s: %w", expName, err)
-	}
+	}	
 
 	if err := mm.StopVMCapture(mm.NS(expName), mm.VMName(vmName)); err != nil {
 		return fmt.Errorf("stopping VM captures for VM %s in experiment %s: %w", vmName, expName, err)
-	}
-
-	for _, capture := range captures {
-		base := filepath.Base(capture.Filepath)
-
-		if err := os.Rename(capture.Filepath, dir+"/"+base); err != nil {
-			return fmt.Errorf("moving capture file %s for interface %d on VM %s in experiment %s: %w", base, capture.Interface, vmName, expName, err)
-		}
-	}
+	}	
 
 	return nil
 }
