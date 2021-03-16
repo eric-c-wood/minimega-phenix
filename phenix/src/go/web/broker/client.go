@@ -334,10 +334,8 @@ func (this *Client) screenshots() {
 
 
 			// If the experiment is no longer running
-			// clear the namespace in case one of the clients
-			// recreated the namespace
-			if !exp.Running() {
-				mm.ClearNamespace(this.vms[0].exp)
+			// do not get screenshots
+			if !exp.Running() {								
 				this.RUnlock()
 				continue
 
